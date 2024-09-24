@@ -1,0 +1,39 @@
+curl -sfL https://get.k3s.io | sh -s - \
+  --flannel-backend=none \
+  --disable-kube-proxy \
+  --disable servicelb \
+  --disable-network-policy \
+  --disable traefik \
+
+---------
+mkdir -p $HOME/.kube
+sudo cp -i /etc/rancher/k3s/k3s.yaml $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+echo "export KUBECONFIG=$HOME/.kube/config" >> $HOME/.bashrc
+source $HOME/.bashrc
+
+---------
+CNI 为Cilium
+
+cilium install --version 1.16.1 --set=ipam.operator.clusterPoolIPv4PodCIDRList="10.42.0.0/16" --set=kubeProxyReplacement=true  --set=k8sServiceHost=12.0.0.150  --set=k8sServicePort=6443
+
+或者使用helm安装 helm  --namespace kube-system  upgrade --install cilium cilium/cilium --version 1.16.1    --values  values.yaml
+
+更多信息请[参考](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)
+
+cilium hubble enable --ui
+
+若要启用prom metrics相关的监控指标 ，执行helm upgrade cilium cilium/cilium --namespace=kube-system --reuse-values --set prometheus.enabled=true --set operator.prometheus.enabled=true
+
+验证：kubectl -n kube-system get pods/cilium-hb6nm -o json | jq -r '.status.podIP' |xargs  -I {}  curl http://{}:9962/metrics
+
+启用hubble指标
+helm upgrade cilium cilium/cilium --namespace=kube-system --reuse-values --set prometheus.enabled=true --set operator.prometheus.enabled=true  --set hubble.enabled=true --set hubble.metrics.enabled="{dns,drop,tcp,flow,port-distribution,httpV2}"
+
+helm upgrade cilium cilium/cilium --namespace=kube-system --reuse-values --set prometheus.enabled=true --set operator.prometheus.enabled=true  --set hubble.enabled=true --set hubble.metrics.enabled="{dns,drop:sourceContext=pod;destinationContext=pod,tcp,flow,port-distribution,httpV2}"
+
+kubectl rollout restart daemonset/cilium -n kube-system
+
+-----------
+
+cilium install --version 1.16.1 --set=ipam.operator.clusterPoolIPv4PodCIDRList="10.42.0.0/16" --set=kubeProxyReplacement=true  --set=k8sServiceHost=12.0.0.150  --set=k8sServicePort=6443 --set=prometheus.enabled=true --set=operator.prometheus.enabled=true  --set=hubble.enabled=true --set=hubble.metrics.enabled="{dns,drop:sourceContext=pod;destinationContext=pod,tcp,flow,port-distribution,httpV2}" --set=l7Proxy=false --set=encryption.enabled=true --set=encryption.type=wireguard  

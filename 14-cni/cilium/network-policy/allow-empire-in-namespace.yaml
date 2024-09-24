@@ -1,0 +1,19 @@
+#有来自与 Death Star 服务位于同一命名空间中的标记为org=empire的 Pod 的入口才能访问相应DeathStar端点上的 TCP 端口 80
+#请注意，此 L4 策略专门限制对充当服务端点的deadstar-* pod 的入口访问，而不是对 Death Star 服务本身的入口访问。
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-empire-in-namespace
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      class: deathstar
+      org: empire
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            org: empire
+      toPorts:
+        - ports:
+            - port: "80"

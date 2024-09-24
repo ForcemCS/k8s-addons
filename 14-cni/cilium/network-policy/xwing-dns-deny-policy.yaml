@@ -1,0 +1,13 @@
+apiVersion: "cilium.io/v2"  
+kind: CiliumNetworkPolicy  
+metadata:  
+  name: "xwing-dns-deny"  
+spec:  
+  endpointSelector:  
+    matchLabels:  
+      class: xwing  
+  egressDeny:  
+  - toEndpoints:  
+    - matchLabels:  
+        namespace: kube-system  
+        k8s-app: kube-dns

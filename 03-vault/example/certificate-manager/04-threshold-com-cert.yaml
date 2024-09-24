@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: threshold-com
+  namespace: threshold
+spec:
+  secretName: threshold-com-tls
+  issuerRef:
+    name: vault-issuer
+  commonName: harbor.threshold.com
+  dnsNames:
+  - harbor.threshold.com

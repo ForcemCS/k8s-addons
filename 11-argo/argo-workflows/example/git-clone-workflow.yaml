@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: git-clone-kaniko-
+  namespace: ci
+spec:
+  serviceAccountName: argo-workflow
+  entrypoint: main
+  volumes:
+  - name: work
+    persistentVolumeClaim:
+      claimName: workflow-space
+  - name: kaniko-secret
+    secret:
+      secretName: registry-secret
+      items:
+        - key: .dockerconfigjson
+          path: config.json
+  templates:
+    - name: main
+      steps:
+        - - name: git-clone
+            templateRef:
+              name: gitlab-clone-kaniko
+              template: clone
+            arguments:
+              parameters:
+              - name: REPO_URL
+                value: 'http://gitlab.x.xinghuihuyu.cn/client/qhyj_middle_proj.git'    #项目地址
+              - name: TARGET_DIR
+                value: 'qhyj_middle_proj'      #克隆到的目标目录
+              - name: REVISION
+                value: master                  #项目分支
+              - name: GIT_TOKEN_SECRET
+                value: 'middle-secret-token'
+              - name: GIT_USERNAME
+                value: root
+        - - name: misc
+            templateRef:
+              name: gitlab-clone-kaniko
+              template: current-ts
+        - - name: build-push
+            templateRef:
+              name: gitlab-clone-kaniko
+              template: kaniko             
+            arguments:
+              parameters:
+              - name: EXTRA_ARGS
+                value: "{{item}}"
+              - name: REPO
+                value: 'harbor.threshold.com:31339'
+              - name: SUBDIR
+                value: 'qhyj_middle_proj'      #构建镜像所在的目录
+              - name: IMAGE_NAME
+                value: middle
+              - name: TAG
+                value: "{{steps.git-clone.outputs.parameters.branch}}-{{steps.misc.outputs.result}}"
+            withItems:
+            - "--skip-tls-verify"
+
+

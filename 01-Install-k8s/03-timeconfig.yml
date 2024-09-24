@@ -1,0 +1,15 @@
+---
+- hosts: all
+  gather_facts: no
+  tasks:
+  - name: Set timezone
+    ansible.builtin.file:
+      src:  /usr/share/zoneinfo/Asia/Shanghai
+      dest: /etc/localtime
+      state: link
+  - name: 24-hour system 
+    lineinfile:
+      path: /etc/default/locale 
+      regexp: '^LC_TIME'
+      line: LC_TIME=en_DK.UTF-8
+      #匹配以LC_TIME开头的行，若不存在则在文本最后一行添加

@@ -1,0 +1,75 @@
+---
+- hosts: all
+  become: true
+  tasks:
+  - name: 安装 prerequisites
+    package:
+      name:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg2
+        - software-properties-common
+      state: present
+  - name: 添加 Docker GPG key
+    apt_key:
+      url: https://repo.huaweicloud.com/docker-ce/linux/ubuntu/gpg
+      state: present
+  - name: Get system release using shell module and register the output
+    shell: lsb_release -cs
+    register: release_info
+
+  - name: 添加 Docker repository
+    apt_repository:
+      repo: deb [arch=amd64] https://repo.huaweicloud.com/docker-ce/linux/ubuntu  {{ release_info.stdout | trim }}  stable
+      state: present
+  - name: 更新 apt cache
+    apt:
+      update_cache: yes
+  - name: 安装 containerd
+    apt:
+      name: containerd.io
+      state: present
+  - name: 生成 containerd 默认配置文件
+    shell: containerd config default > /etc/containerd/config.toml
+
+  - name: 替换 SystemdCgroup 为 true
+    replace:
+      path: "/etc/containerd/config.toml"
+      regexp: "SystemdCgroup = false"
+      replace: "SystemdCgroup = true"
+
+  - name: 创建站点目录
+    file:
+      path: /etc/containerd/{{ item }}
+      state: directory
+      mode: 0755
+      owner: root
+      group: root
+    with_items:
+      - certs.d
+  - name: 替换 containerd 配置文件中的 config_path
+    replace:
+      path: /etc/containerd/config.toml
+      regexp: '^(.*\[plugins."io\.containerd\.grpc\.v1\.cri"\.registry\].*\n.*)config_path = ""(.*)$'
+      replace: '\1config_path = "/etc/containerd/certs.d"\2'
+    notify:
+      - restart containerd
+
+  handlers:
+  - name: restart containerd
+    systemd:
+      name: containerd
+      state: started
+      enabled: yes
+
+
+
+#replace: 这部分定义了替换文本。
+
+#\1: 引用第一个捕获组的内容，即匹配到的 [plugins."io\.containerd\.grpc\.v1\.cri"\.registry] 之前的部分。
+#config_path = "/etc/containerd/certs.d": 新的配置项内容，将 config_path 设置为 /etc/containerd/certs.d。
+#\2: 引用第二个捕获组的内容，即匹配到的 config_path = "" 之后的部分。、
+
+
+# trim 是 Ansible 的过滤器，用于去除输出中的空格和换行符。

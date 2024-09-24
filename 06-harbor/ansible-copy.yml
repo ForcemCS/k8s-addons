@@ -1,0 +1,33 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: 创建目录harbor.threshold.com:31339
+      file:
+        path: /etc/containerd/certs.d/harbor.threshold.com:31339
+        state: directory
+        mode: 0755
+
+    - name: 创建 hosts.toml 文件
+      copy:
+        dest: /etc/containerd/certs.d/harbor.threshold.com:31339/hosts.toml
+        content: |
+          server = "https://harbor.threshold.com:31339"
+
+          [host."https://harbor.threshold.com:31339"]
+            ca = "/etc/certs.d/harbor.threshold.com.crt"
+    - name: 创建 /etc/certs.d
+      file:
+        path: /etc/certs.d
+        state: directory
+        mode: 0755
+
+    - name: 拷贝证书文件
+      copy:
+        src: /root/v1.30/06-harbor/harbor.threshold.com.crt
+        dest: /etc/certs.d/harbor.threshold.com.crt
+        mode: 0644
+
+####关于使用ctr命令的示例
+# ctr  -n k8s.io images  tag  docker.io/curlimages/curl:8.8.0  harbor.threshold.com:31339/library/curl:8.8.0
+# ctr -n k8s.io images push --platform linux/amd64 --user admin:basic@123 --hosts-dir "/etc/containerd/certs.d"     harbor.threshold.com:31339/library/curl:8.8.0

@@ -1,0 +1,4 @@
+#只是用来测试使用的
+helm  -n minio-operator   upgrade --install  minio-operator  --version 6.0.2   minio-operator/operator
+
+helm -n minio-tenant upgrade --install  minio-tenant   --version 6.0.2      minio-operator/tenant  --values tenant-values.yaml

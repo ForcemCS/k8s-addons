@@ -1,0 +1,5 @@
+#此目录下的内容暂时还没调试通
+kubectl create secret generic -n monitoring \
+  alertmanager-prometheus-stack-wechat \
+  --from-file=alertmanager.yaml \
+  --dry-run=client --save-config -o yaml | kubectl apply -f -

@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: thanosbench-job
+spec:
+  completions: 1 # 只运行一次
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - node01
+      restartPolicy: Never
+      # 定义一个emptyDir卷，用于在初始化容器和主容器之间共享数据
+      volumes:
+      - name: prom-txcloud-data
+        hostPath:
+          path: /prom-stack/prometheus/prometheus-db
+      containers:
+      - name: thanosbench
+        image: quay.io/thanos/thanosbench:v0.3.0-rc.0
+        command:
+        - sh
+        - -c
+        args:
+        - |
+          thanosbench block plan -p continuous-365d-tiny --labels 'cluster="prod"' --max-time=6h | thanosbench block gen --output.dir /prom-txcloud
+        volumeMounts:
+        - name: prom-txcloud-data
+          mountPath: /prom-txcloud

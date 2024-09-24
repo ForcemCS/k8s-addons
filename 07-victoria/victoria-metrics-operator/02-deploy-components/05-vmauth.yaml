@@ -1,0 +1,15 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAuth
+metadata:
+  name: demo
+  namespace: vm
+spec:
+  selectAllByDefault: true
+  userNamespaceSelector: {}
+  userSelector: {}
+  ingress:
+    class_name: nginx # <-- change this to your ingress-controller
+    host: vmauth.threshold.com # <-- change this to your domain
+    tlsSecretName: vmauth-threshold-com
+    tlsHosts:
+    - vmauth.threshold.com

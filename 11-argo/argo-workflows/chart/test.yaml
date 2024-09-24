@@ -1,0 +1,278 @@
+images:
+  tag: ""
+  pullPolicy: Always
+  pullSecrets: []
+crds:
+  install: true
+  keep: true
+  annotations: {}
+createAggregateRoles: true
+nameOverride:
+fullnameOverride:
+namespaceOverride: ""
+commonLabels: {}
+kubeVersionOverride: ""
+apiVersionOverrides:
+singleNamespace: false
+workflow:
+  namespace:
+  serviceAccount:
+    create: false
+    labels: {}
+    annotations: {}
+    name: "argo-workflow"
+    pullSecrets: []
+  rbac:
+    create: true
+    serviceAccounts: []
+controller:
+  image:
+    registry: quay.io
+    repository: argoproj/workflow-controller
+    tag: ""
+  parallelism:
+  resourceRateLimit: {}
+  rbac:
+    create: true
+    secretWhitelist: []
+    accessAllSecrets: false
+    writeConfigMaps: false
+  configMap:
+    create: true
+    name: ""
+  namespaceParallelism:
+  initialDelay:
+  deploymentAnnotations: {}
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  metricsConfig:
+    enabled: false
+    path: /metrics
+    port: 9090
+    metricsTTL: ""
+    ignoreErrors: false
+    secure: false
+    portName: metrics
+    servicePort: 8080
+    servicePortName: metrics
+    headlessService: false
+    relabelings: []
+    metricRelabelings: []
+    targetLabels: []
+  securityContext:
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  persistence: {}
+  workflowDefaults: {}
+  workflowRestrictions: {}
+  telemetryConfig:
+    enabled: false
+    path: /telemetry
+    port: 8081
+    metricsTTL: ""
+    ignoreErrors: false
+    secure: false
+    servicePort: 8081
+    servicePortName: telemetry
+  serviceMonitor:
+    enabled: false
+    additionalLabels: {}
+  serviceAccount:
+    create: true
+    name: ""
+    labels: {}
+    annotations: {}
+  name: workflow-controller
+  workflowNamespaces:
+    - default
+  instanceID:
+    enabled: false
+    useReleaseName: false
+    explicitID: ""
+  logging:
+    level: info
+    globallevel: "0"
+    format: "text"
+  serviceType: ClusterIP
+  serviceAnnotations: {}
+  serviceLabels: {}
+  loadBalancerSourceRanges: []
+  resources: {}
+  livenessProbe:
+    httpGet:
+      port: 6060
+      path: /healthz
+    failureThreshold: 3
+    initialDelaySeconds: 90
+    periodSeconds: 60
+    timeoutSeconds: 30
+  extraEnv: []
+  extraArgs: []
+  volumeMounts: []
+  volumes: []
+  replicas: 1
+  revisionHistoryLimit: 10
+  pdb:
+    enabled: false
+  nodeSelector:
+    kubernetes.io/os: linux
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  priorityClassName: ""
+  links: []
+  columns: []
+  navColor: ""
+  clusterWorkflowTemplates:
+    enabled: true
+    serviceAccounts: []
+  extraContainers: []
+  extraInitContainers: []
+  retentionPolicy: {}
+  nodeEvents:
+    enabled: true
+  kubeConfig: {}
+  podGCGracePeriodSeconds:
+  podGCDeleteDelayDuration: ""
+mainContainer:
+  imagePullPolicy: ""
+  resources: {}
+  env: []
+  envFrom: []
+  securityContext: {}
+executor:
+  image:
+    registry: quay.io
+    repository: argoproj/argoexec
+    tag: ""
+    pullPolicy: ""
+  resources: {}
+  args: []
+  env: []
+  securityContext: {}
+server:
+  enabled: true
+  baseHref: /
+  image:
+    registry: quay.io
+    repository: argoproj/argocli
+    tag: ""
+  deploymentAnnotations: {}
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  rbac:
+    create: true
+  securityContext:
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  name: server
+  serviceType: ClusterIP
+  servicePort: 2746
+  hostAliases: []
+  serviceAccount:
+    create: true
+    name: ""
+    labels: {}
+    annotations: {}
+  serviceAnnotations: {}
+  serviceLabels: {}
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+  resources: {}
+  replicas: 1
+  revisionHistoryLimit: 10
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 50
+    targetMemoryUtilizationPercentage: 50
+    behavior: {}
+  pdb:
+    enabled: false
+  nodeSelector:
+    kubernetes.io/os: linux
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  priorityClassName: ""
+  secure: false
+  extraEnv: []
+  authMode: ""
+  authModes: []
+  extraArgs: []
+  logging:
+    level: info
+    globallevel: "0"
+    format: "text"
+  tmpVolume:
+    emptyDir: {}
+  volumeMounts: []
+  volumes: []
+  ingress:
+    enabled: false
+    annotations: {}
+    labels: {}
+    ingressClassName: ""
+    hosts: []
+    paths:
+      - /
+    pathType: Prefix
+    extraPaths: []
+    tls: []
+  GKEbackendConfig:
+    enabled: false
+    spec: {}
+  GKEmanagedCertificate:
+    enabled: false
+    domains:
+    - argoworkflows.example.com
+  GKEfrontendConfig:
+    enabled: false
+    spec: {}
+  clusterWorkflowTemplates:
+    enabled: true
+    enableEditing: true
+  sso:
+    enabled: false
+    issuer: https://accounts.google.com
+    clientId:
+      name: argo-server-sso
+      key: client-id
+    clientSecret:
+      name: argo-server-sso
+      key: client-secret
+    redirectUrl: ""
+    rbac:
+      enabled: true
+      secretWhitelist: []
+    scopes: []
+    sessionExpiry: ""
+    issuerAlias: ""
+    customGroupClaimName: ""
+    userInfoPath: ""
+    insecureSkipVerify: false
+    filterGroupsRegex: []
+  extraContainers: []
+  extraInitContainers: []
+extraObjects: []
+useStaticCredentials: true
+artifactRepository:
+  archiveLogs: false
+  s3: {}
+  gcs: {}
+  azure: {}
+customArtifactRepository: {}
+artifactRepositoryRef: {}
+emissary:
+  images: []

@@ -1,0 +1,129 @@
+---
+# secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-secret
+type: Opaque
+stringData:
+  secretToken: "12345678"
+---
+# Event listener
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: gitlab-event-listener
+spec:
+  serviceAccountName: tekton-triggers-example-sa 
+  triggers:
+    - triggerRef: gitlab-listener-trigger
+---
+# Trigger
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: gitlab-listener-trigger
+spec:
+  interceptors:
+    - name: "verify-gitlab-payload"
+      ref:
+        name: "gitlab"
+        kind: ClusterInterceptor
+      params:
+        - name: secretRef
+          value:
+            secretName: "gitlab-secret"
+            secretKey: "secretToken"
+        - name: eventTypes
+          value:
+            - "Push Hook"
+    - name: "CEL filter: only when PRs are opened"
+      ref:
+        name: "cel"
+      params:
+        - name: "overlays"
+          value:
+            - key: branch_name
+              expression: "body.ref.split('/')[2]" #Here we are splitting the body.ref as it gives output "ref/head/<branch name or tag>" with "/" to grep only branch name.
+            - key: short_sha
+              expression: "body.checkout_sha.truncate(8)"
+            - key: subdirectory
+              expression: "body.project.name" 
+  bindings:
+    - ref: binding
+  template:
+    ref: trigger-template
+---
+# Trigger Binding
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: binding
+spec:
+  params:
+    - name: gitrevision-tag
+      value: $(extensions.branch_name) #the branch name that we split in trigger
+    - name: container_tag
+      value: $(extensions.short_sha)
+    - name: subdirectory
+      value: $(extensions.subdirectory)
+---
+# Trigger Template
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: trigger-template
+spec:
+  params:
+    - name: gitrevision-tag
+    - name: container_tag
+    - name: subdirectory
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: clone-build-helm-
+      spec:
+        serviceAccountName: tekton-triggers-example-sa
+        pipelineRef:
+          name: clone-build-helm
+        taskRunSpecs:
+        - pipelineTaskName: helm-install-middle
+          serviceAccountName: tekton-helm-sa
+        podTemplate:
+          securityContext:
+            fsGroup: 65532
+        workspaces:
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: push-image-pvc
+        - name: docker-credentials
+          secret:
+            secretName: harbor-secret
+            items:
+              - key: .dockerconfigjson
+                path: config.json
+        - name: gitlab-credentials
+          secret:
+            secretName: git-credentials
+        params:
+        - name: repo-url
+          value: http://gitlab.x.xinghuihuyu.cn/client/qhyj_middle_proj.git
+        - name: subdirectory
+          value: $(tt.params.subdirectory)
+        - name: container_image
+          value: harbor.threshold.com:31339/tekton/middle
+        - name: container_tag
+          value: $(tt.params.container_tag)
+        - name: gitrevision-tag
+          value: $(tt.params.gitrevision-tag)
+        - name: charts_dir
+          value: helm
+        - name: releases_version
+          value: v1
+        - name: release_name
+          value: middle
+        - name: release_namespace
+          value: default
+        - name: overwrite_values
+          value: "namespace=default,image.repo=harbor.threshold.com:31339/tekton/middle,image.tag=$(tt.params.gitrevision-tag)-$(tt.params.container_tag)"

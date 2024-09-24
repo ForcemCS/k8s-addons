@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/ssh-auth
+metadata:
+  name: git-credentials
+  annotations:
+    tekton.dev/git-0: http://gitlab.x.xinghuihuyu.cn
+type: kubernetes.io/basic-auth
+stringData:
+  username: root
+  password: basic123
+  #有关更安全的方式请自行参考官方项目演示
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton-triggers-example-sa
+secrets:
+  - name: git-credentials

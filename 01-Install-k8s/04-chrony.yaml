@@ -1,0 +1,26 @@
+---
+- hosts: all
+  gather_facts: no
+  tasks:
+  - name: Install chrony
+    ansible.builtin.apt:
+      name: chrony
+      state: latest 
+      update_cache: no 
+  - name: delete  line include centos.pool
+    lineinfile:
+      path: /etc/chrony/chrony.conf
+      regexp: 'ubuntu.pool'
+      state: absent
+  - name: add  line
+    lineinfile:
+      path: /etc/chrony/chrony.conf
+      insertafter: 'ntp.ubuntu.com'
+      state: present
+      line: 'pool 12.0.0.100             iburst maxsources 1'
+  - name:
+    ansible.builtin.systemd:
+      name: chrony.service
+      state: restarted
+      enabled: yes
+#*/5 * * * * /usr/sbin/ntpdate time1.aliyun.com &> /dev/null && hwclock -w &> /dev/null #提供NTP server端配置

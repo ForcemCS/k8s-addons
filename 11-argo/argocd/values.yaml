@@ -1,0 +1,32 @@
+global:
+  domain: argocd.threshold.com
+configs:
+  params:
+    server.insecure: true
+server:
+  ingress:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    ingressClassName: "nginx"
+    hostname: "argocd.threshold.com"
+    path: /
+    pathType: Prefix
+    tls: false
+    extraTls:
+    - hosts:
+      - argocd.threshold.com
+      secretName: argocd-threshold-com
+  ingressGrpc:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    ingressClassName: "nginx"
+    hostname: "g.argocd.threshold.com"
+    path: /
+    pathType: Prefix
+    extraTls:
+    - hosts:
+      - g.argocd.threshold.com
+      secretName: g-argocd-threshold-com

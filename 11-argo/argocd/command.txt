@@ -1,0 +1,1 @@
+helm    -n argocd   upgrade --install    argocd  --version 7.3.11  argo/argo-cd  --values  values.yaml

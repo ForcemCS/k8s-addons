@@ -1,0 +1,74 @@
+existingObjstoreSecret: thanos-cos-config
+##--------
+query:
+  enabled: true
+  dnsDiscovery:
+    sidecarsService: prometheus-stack-kube-prom-thanos-discovery
+    sidecarsNamespace: monitoring
+##--------切片和切块、分布式查询和缓存的查询系统
+queryFrontend:
+  enabled: true
+  service:
+    type: NodePort
+  ingress:
+    enabled: true
+    hostname: thanos.threshold.com
+    ingressClassName: nginx
+  replicaCount: 1
+  pdb:
+    create: true
+  extraFlags:
+    - '--query-frontend.downstream-tripper-config="max_idle_conns_per_host": 100'
+  config: |-
+    type: IN-MEMORY
+    config:
+      max_size: "0"
+      max_size_items: 1024
+      validity: "2h"
+##--------
+bucketweb:
+  enabled: true
+  refresh: "10m"
+##--------
+compactor:
+  enabled: true
+  extraFlags:
+  - '--wait-interval=30s'
+  service:
+    type: NodePort
+  persistence:
+    enabled: true
+    storageClass: "longhorn"
+    accessModes:
+      - ReadWriteOnce
+    size: 2Gi
+##在本地磁盘上保留有关所有远程块的少量信息
+storegateway:
+  enabled: true	
+  config:
+  
+  persistence:
+    enabled: true
+    storageClass: "longhorn"
+    accessModes:
+      - ReadWriteOnce
+    size: 2Gi
+  pdb:
+    create: true
+  config: |-
+    type: IN-MEMORY
+    config:
+      max_size: 250MB
+      max_item_size: 125MB
+    enabled_items: []
+##--------	 
+ruler:
+  enabled: false
+##--------
+receive:
+  enabled: false
+##--------
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true

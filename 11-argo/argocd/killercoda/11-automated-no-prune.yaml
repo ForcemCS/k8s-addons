@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    #集群与存储的资源同步关系为no
+    argocd.argoproj.io/sync-options: Prune=false
+  name: guestbook-ui-no-prune
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: guestbook-ui

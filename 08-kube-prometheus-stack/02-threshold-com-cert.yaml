@@ -1,0 +1,27 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: prom-threshold-com
+  namespace: monitoring
+spec:
+  secretName: prom-threshold-com
+  issuerRef:
+    name: vault-cluster-issuer
+    kind: ClusterIssuer
+  commonName: prom.threshold.com
+  dnsNames:
+  - prom.threshold.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-threshold-com
+  namespace: monitoring
+spec:
+  secretName: grafana-threshold-com
+  issuerRef:
+    name: vault-cluster-issuer
+    kind: ClusterIssuer
+  commonName: grafana.threshold.com
+  dnsNames:
+  - grafana.threshold.com

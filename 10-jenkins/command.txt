@@ -1,0 +1,1 @@
+helm -n jenkins  upgrade    jenkins  --version 5.4.2  jenkins/jenkins  --values  values.yaml

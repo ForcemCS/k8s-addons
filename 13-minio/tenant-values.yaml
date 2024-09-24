@@ -1,0 +1,42 @@
+secrets:
+  name: roh5minio-env-configuration
+  accessKey: minio 
+  secretKey: minio123
+tenant:
+  name: roh5minio
+  configuration:
+    name: roh5minio-env-configuration
+  pools:
+    - servers: 1
+      name: pool-0
+      volumesPerServer: 1
+      storageClassName: local-storage-minio
+      size: 10Gi
+ingress:
+  api:
+    enabled: false
+    ingressClassName: ""
+    labels: { }
+    annotations: { }
+    tls: [ ]
+    host: minio.local
+    path: /
+    pathType: Prefix
+  console:
+    enabled: true
+    ingressClassName: "nginx"
+    labels: { }
+    annotations: 
+      ## Remove if using CA signed certificate
+      nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+      nginx.ingress.kubernetes.io/rewrite-target: /
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/server-snippet: |
+        client_max_body_size 0;
+      nginx.ingress.kubernetes.io/configuration-snippet: |
+        chunked_transfer_encoding off;
+    tls: [ ]
+    host: minio-console.threshold.com
+    path: /
+    pathType: Prefix

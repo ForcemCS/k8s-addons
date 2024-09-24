@@ -1,0 +1,270 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cni.projectcalico.org/containerID: 9ab8f5f02f609723f9d0580059cdf43728c5127f0594ddeacd11f13f69d7cec8
+    cni.projectcalico.org/podIP: 192.168.196.171/32
+    cni.projectcalico.org/podIPs: 192.168.196.171/32
+  creationTimestamp: "2024-06-20T06:16:05Z"
+  generateName: vault-
+  labels:
+    app.kubernetes.io/instance: vault
+    app.kubernetes.io/name: vault
+    apps.kubernetes.io/pod-index: "0"
+    component: server
+    controller-revision-hash: vault-64f68d8d49
+    helm.sh/chart: vault-0.28.0
+    statefulset.kubernetes.io/pod-name: vault-0
+  name: vault-0
+  namespace: vault
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: StatefulSet
+    name: vault
+    uid: b80de41c-9152-41e9-bb56-a3b37e3ed812
+  resourceVersion: "388468"
+  uid: 7a36eb11-0ccd-4391-904b-4bf734f7f931
+spec:
+  containers:
+  - args:
+    - "cp /vault/config/extraconfig-from-values.hcl /tmp/storageconfig.hcl;\n[ -n
+      \"${HOST_IP}\" ] && sed -Ei \"s|HOST_IP|${HOST_IP?}|g\" /tmp/storageconfig.hcl;\n[
+      -n \"${POD_IP}\" ] && sed -Ei \"s|POD_IP|${POD_IP?}|g\" /tmp/storageconfig.hcl;\n[
+      -n \"${HOSTNAME}\" ] && sed -Ei \"s|HOSTNAME|${HOSTNAME?}|g\" /tmp/storageconfig.hcl;\n[
+      -n \"${API_ADDR}\" ] && sed -Ei \"s|API_ADDR|${API_ADDR?}|g\" /tmp/storageconfig.hcl;\n[
+      -n \"${TRANSIT_ADDR}\" ] && sed -Ei \"s|TRANSIT_ADDR|${TRANSIT_ADDR?}|g\" /tmp/storageconfig.hcl;\n[
+      -n \"${RAFT_ADDR}\" ] && sed -Ei \"s|RAFT_ADDR|${RAFT_ADDR?}|g\" /tmp/storageconfig.hcl;\n/usr/local/bin/docker-entrypoint.sh
+      vault server -config=/tmp/storageconfig.hcl \n"
+    command:
+    - /bin/sh
+    - -ec
+    env:
+    - name: HOST_IP
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: status.hostIP
+    - name: POD_IP
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: status.podIP
+    - name: VAULT_K8S_POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: VAULT_K8S_NAMESPACE
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.namespace
+    - name: VAULT_ADDR
+      value: https://127.0.0.1:8200
+    - name: VAULT_API_ADDR
+      value: https://$(POD_IP):8200
+    - name: SKIP_CHOWN
+      value: "true"
+    - name: SKIP_SETCAP
+      value: "true"
+    - name: HOSTNAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: VAULT_CLUSTER_ADDR
+      value: https://$(HOSTNAME).vault-internal:8201
+    - name: VAULT_RAFT_NODE_ID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: HOME
+      value: /home/vault
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: /vault/userconfig/kms-creds/credentials.json
+    - name: GOOGLE_PROJECT
+      value: k8s-vault-426910
+    - name: GOOGLE_REGION
+      value: asia-east2
+    - name: VAULT_CACERT
+      value: /vault/userconfig/vault-ha-tls/vault.ca
+    - name: VAULT_TLSCERT
+      value: /vault/userconfig/vault-ha-tls/vault.crt
+    - name: VAULT_TLSKEY
+      value: /vault/userconfig/vault-ha-tls/vault.key
+    image: hashicorp/vault:1.16.1
+    imagePullPolicy: IfNotPresent
+    lifecycle:
+      preStop:
+        exec:
+          command:
+          - /bin/sh
+          - -c
+          - sleep 5 && kill -SIGTERM $(pidof vault)
+    name: vault
+    ports:
+    - containerPort: 8200
+      name: https
+      protocol: TCP
+    - containerPort: 8201
+      name: https-internal
+      protocol: TCP
+    - containerPort: 8202
+      name: https-rep
+      protocol: TCP
+    readinessProbe:
+      exec:
+        command:
+        - /bin/sh
+        - -ec
+        - vault status -tls-skip-verify
+      failureThreshold: 2
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 3
+    resources: {}
+    securityContext:
+      allowPrivilegeEscalation: false
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /vault/audit
+      name: audit
+    - mountPath: /vault/data
+      name: data
+    - mountPath: /vault/config
+      name: config
+    - mountPath: /vault/userconfig/kms-creds
+      name: userconfig-kms-creds
+      readOnly: true
+    - mountPath: /vault/userconfig/vault-ha-tls
+      name: userconfig-vault-ha-tls
+      readOnly: true
+    - mountPath: /home/vault
+      name: home
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-w2d6h
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  hostname: vault-0
+  nodeName: node01
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext:
+    fsGroup: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 100
+  serviceAccount: vault
+  serviceAccountName: vault
+  subdomain: vault-internal
+  terminationGracePeriodSeconds: 10
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: data-vault-0
+  - name: audit
+    persistentVolumeClaim:
+      claimName: audit-vault-0
+  - configMap:
+      defaultMode: 420
+      name: vault-config
+    name: config
+  - name: userconfig-kms-creds
+    secret:
+      defaultMode: 420
+      secretName: kms-creds
+  - name: userconfig-vault-ha-tls
+    secret:
+      defaultMode: 420
+      secretName: vault-ha-tls
+  - emptyDir: {}
+    name: home
+  - name: kube-api-access-w2d6h
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-06-20T06:16:07Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2024-06-20T06:16:06Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-06-20T06:16:06Z"
+    message: 'containers with unready status: [vault]'
+    reason: ContainersNotReady
+    status: "False"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-06-20T06:16:06Z"
+    message: 'containers with unready status: [vault]'
+    reason: ContainersNotReady
+    status: "False"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-06-20T06:16:06Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://4ca0e8533481e1347b58fe47a7b57c6be3cd238c2e1e7386a6c8bb7fcbaba64f
+    image: docker.io/hashicorp/vault:1.16.1
+    imageID: docker.io/hashicorp/vault@sha256:5efe43c659d4dc53539a589a95d5ffe77fffb761b407766e0408b0b18c30cad8
+    lastState:
+      terminated:
+        containerID: containerd://4ca0e8533481e1347b58fe47a7b57c6be3cd238c2e1e7386a6c8bb7fcbaba64f
+        exitCode: 1
+        finishedAt: "2024-06-20T06:22:16Z"
+        reason: Error
+        startedAt: "2024-06-20T06:22:16Z"
+    name: vault
+    ready: false
+    restartCount: 6
+    started: false
+    state:
+      waiting:
+        message: back-off 5m0s restarting failed container=vault pod=vault-0_vault(7a36eb11-0ccd-4391-904b-4bf734f7f931)
+        reason: CrashLoopBackOff
+  hostIP: 12.0.0.101
+  hostIPs:
+  - ip: 12.0.0.101
+  phase: Running
+  podIP: 192.168.196.171
+  podIPs:
+  - ip: 192.168.196.171
+  qosClass: BestEffort
+  startTime: "2024-06-20T06:16:06Z"

@@ -1,0 +1,7 @@
+helm    -n  workflow   upgrade --install     argo-workflows    argo/argo-workflows --version 0.41.14   --values  values.yaml
+
+
+docker run -d  --name minio  -p 9000:9000 -p 9001:9001  -v /root/minio:/data   -e "MINIO_ACCESS_KEY=minio" -e "MINIO_SECRET_KEY=basic@123"  quay.io/minio/minio server /data --console-address ":9001"
+
+
+kubectl create secret -n workflow generic minio-cred --from-literal=accesskey='AFPcR2LItk9OyJAfXLyx' --from-literal=secretkey='Jpg2smh3I4YttaiMySI4zNjCkWwFCMrvh6QRAKBo'

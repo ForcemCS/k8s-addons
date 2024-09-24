@@ -1,0 +1,28 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argocd-threshold-com
+  namespace: argocd
+spec:
+  secretName: argocd-threshold-com
+  issuerRef:
+    name: vault-cluster-issuer
+    kind: ClusterIssuer
+  commonName: argocd.threshold.com
+  dnsNames:
+  - argocd.threshold.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: g-argocd-threshold-com
+  namespace: argocd
+spec:
+  secretName: g-argocd-threshold-com
+  issuerRef:
+    name: vault-cluster-issuer
+    kind: ClusterIssuer
+  commonName: g.argocd.threshold.com
+  dnsNames:
+  - g.argocd.threshold.com
+

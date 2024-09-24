@@ -1,0 +1,42 @@
+---
+- hosts: all
+  gather_facts: no
+  tasks:
+  - name: 安装 prerequisites
+    package:
+      name:
+        - gpg
+      state: present
+
+  - name: Import Release Key into Keyring
+    become: true
+    shell: curl -fsSL https://mirrors.aliyun.com/kubernetes-new/core/stable/v1.30/deb/Release.key |    gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+  - name: 添加 Kubernetes 仓库
+    blockinfile:
+      path: /etc/apt/sources.list.d/kubernetes.list
+      create: yes
+      block: |
+        deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://mirrors.aliyun.com/kubernetes-new/core/stable/v1.30/deb/ /
+  - name: 更新 apt cache
+    apt:
+      update_cache: yes
+
+  - name: 安装 Kubernetes 组件
+    apt:
+      name:
+        - kubelet
+        - kubeadm
+        - kubectl
+      state: present
+
+  - name: 锁定 Kubernetes 组件版本
+    apt:
+      name:
+        - kubelet
+        - kubeadm
+        - kubectl
+      state: hold
+
+#然后主节点初始化以设置控制平面
+#kubeadm init  --kubernetes-version=v1.30.2  --apiserver-advertise-address=12.0.0.100  --pod-network-cidr="192.168.0.0/16" --node-name master01   --token-ttl=0 --image-repository=registry.aliyuncs.com/google_containers

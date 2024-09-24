@@ -1,0 +1,2 @@
+kubectl -n thanos create secret generic thanos-cos-config --from-file=objstore.yml=./tx-cos.yaml
+helm -n thanos  install thanos bitnami/thanos --values thanos-values.yaml

@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: helm-upgrade-from-source
+spec:
+  serviceAccountName: tekton-helm-sa
+  taskRef:
+    name: helm-upgrade-test
+  params:
+  - name: charts_dir
+    value: qhyj_middle_proj/helm
+  - name: releases_version
+    value: v1
+  - name: release_name
+    value: test
+  - name: overwrite_values
+    value: "namespace=default,image.repo=harbor.threshold.com:31339/tekton/middle@sha256:f2ece06d362086ecaeaa454bad2a290aeffa1eed80e318b744b6033673c6cf80"
+  workspaces:
+  - name: source
+    persistentVolumeClaim:
+      claimName: push-image-pvc

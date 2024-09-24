@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: jenkins-threshold-com
+  namespace: jenkins
+spec:
+  secretName: jenkins-threshold-com
+  issuerRef:
+    name: vault-cluster-issuer
+    kind: ClusterIssuer
+  commonName: jenkins.threshold.com
+  dnsNames:
+  - jenkins.threshold.com

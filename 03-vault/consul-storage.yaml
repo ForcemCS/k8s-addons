@@ -1,0 +1,47 @@
+global:
+   enabled: true
+   tlsDisable: false
+injector:
+   enabled: true
+server:
+   extraEnvironmentVars:
+      VAULT_CACERT: /vault/userconfig/vault-ha-tls/vault.ca
+      VAULT_TLSCERT: /vault/userconfig/vault-ha-tls/vault.crt
+      VAULT_TLSKEY: /vault/userconfig/vault-ha-tls/vault.key
+   volumes:
+      - name: userconfig-vault-ha-tls
+        secret:
+         defaultMode: 420
+         secretName: vault-ha-tls
+   volumeMounts:
+      - mountPath: /vault/userconfig/vault-ha-tls
+        name: userconfig-vault-ha-tls
+        readOnly: true
+   dataStorage:
+     storageClass: local-storage-vault 
+   standalone:
+      enabled: false
+   affinity: ""
+   ha:
+      enabled: true
+      replicas: 3
+      config: |
+         cluster_name = "vault-consul-storage"
+         ui = true
+         listener "tcp" {
+            #启用tls
+            tls_disable = 0
+            #这个字段定义了Vault服务器监听传入连接的网络接口,通常也可以认为是 Vault API（CLI,应用程序与之交互） 的地址
+            address = "[::]:8200"
+            #Vault集群内部节点之间进行通信的地址。其他 Vault 节点会使用这个地址来连接到当前节点，进行数据同步、领导者选举等操作。
+            cluster_address = "[::]:8201"
+            tls_cert_file = "/vault/userconfig/vault-ha-tls/vault.crt"
+            tls_key_file  = "/vault/userconfig/vault-ha-tls/vault.key"
+            tls_client_ca_file = "/vault/userconfig/vault-ha-tls/vault.ca"
+         }
+         storage "consul" {
+             path = "vault/"
+             address = "https://consul-server.consul.svc.cluster.local:8501"
+         }
+         disable_mlock = true
+         service_registration "kubernetes" {}

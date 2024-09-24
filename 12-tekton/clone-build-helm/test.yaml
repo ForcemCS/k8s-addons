@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: params-array-indexing-1
+spec:
+  serviceAccountName: tekton-triggers-example-sa
+  params:
+    - name: array-to-echo
+      value:
+        - "foo"
+        - "bar"
+  taskSpec:
+    params:
+      - name: array-to-echo
+        type: array
+    steps:
+      # this step should echo "foo"
+      - name: echo-params-1
+        image: mirror.gcr.io/bash
+        args: [
+          "echo",
+          "$(params.array-to-echo[0])",
+        ]

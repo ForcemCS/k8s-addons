@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: harbor-threshold-com
+  namespace: harbor
+spec:
+  secretName: harbor-threshold-com
+  issuerRef:
+    name: vault-cluster-issuer
+    kind: ClusterIssuer
+  commonName: harbor.threshold.com
+  dnsNames:
+  - harbor.threshold.com

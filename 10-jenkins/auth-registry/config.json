@@ -1,0 +1,13 @@
+{
+	"auths": {
+		"harbor.threshold.com:31339": {
+			"auth": "YWRtaW46YmFzaWNAMTIz"
+		},
+		"lb-etkxh0j3-azlwq5ic9dpkotm4.clb.ap-shanghai.tencentclb.com:5000": {
+			"auth": "bG9jYWw6bG9jYWwuY29tMTIz"
+		},
+		"swr.ap-southeast-4.myhuaweicloud.com": {
+			"auth": "YXAtc291dGhlYXN0LTRAME5RQ1BBOExRMFRTNVFFTk5BN0g6MDUxODc1NWEzNGJkMDQzYWQ4YTk1N2VhNzM4MmIyYjEzZDZhM2YyY2JmMTcxOWI4ZDJlMGE1NTI4ODk3NDIyMQ=="
+		}
+	}
+}

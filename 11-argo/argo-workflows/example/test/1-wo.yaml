@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: git-clone-1-
+  namespace: ci
+spec:
+  serviceAccountName: argo-workflow
+  entrypoint: clone
+  volumes:
+  - name: work
+    persistentVolumeClaim:
+      claimName: workflow-space
+  arguments:
+    parameters:
+    - name: REPO_URL
+      value: 'http://gitlab.x.xinghuihuyu.cn/flux-cd/app-demo.git'
+  workflowTemplateRef:
+    name: gitlab-clone-1

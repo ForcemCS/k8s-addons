@@ -1,0 +1,34 @@
+route:
+  # Group alerts with the same alert name and job into one notification.
+  groupBy: ['alertname', 'job']
+  
+  #continue: false
+
+  # Wait 30s before sending the initial notification for a group.
+  groupWait: 30s
+  # Wait 5m before sending follow-up notifications for new alerts in a group.
+  groupInterval: 2m
+  # Wait 3h before repeating the same notification again.
+  repeatInterval: 3h
+
+  # By default, send notifications to team A's Slack channel.
+  receiver: wechat
+
+  # Child routes with job-specific matchers & overrides.
+  routes:
+  - matchers:
+    - matchType: =
+      name: alertname
+      value: DemoServiceInstanceDown
+    receiver: wechat
+    # Child route 1. Match alerts for job="job-a".
+      # Send these alerts to team A's Slack channel...
+	  
+receivers:
+- name: 'wechat'
+  wechat_configs: 
+  - send_resolved: true
+    message: '{{ template "wechat.default.message" . }}'
+    to_party: '1'         
+    agent_id: '1000002'     
+    api_secret: '8UZQJsSg3u9rDs6B0SfntAd0tCe1HY4ZYcWVWK-rGVI'

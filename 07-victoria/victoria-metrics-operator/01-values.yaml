@@ -1,0 +1,10 @@
+operator:
+  disable_prometheus_converter: false
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 500Mi
+  requests:
+    cpu: 100m
+    memory: 150Mi

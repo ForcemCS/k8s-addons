@@ -1,0 +1,138 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: clone-build-helm
+spec:
+  description: |
+    This pipeline clones a git repo, builds a Docker image with Kaniko and
+    pushes it to a registry    
+  params:
+  - name: repo-url
+    type: string
+    description: GitLab的项目地址
+  - name: subdirectory
+    type: string
+  - name: gitrevision-tag
+    type: string
+    description: 项目分支名称
+  - name: container_image
+  - name: container_tag
+    description: 构建镜像后的新tag
+  - name: short-sha
+  - name: charts_dir
+    default: helm
+  - name: releases_version
+    default: v1
+  - name: release_name
+    default: middle
+  - name: release_namespace
+    default: default
+  - name: overwrite_values
+  workspaces:
+  - name: shared-data
+  - name: docker-credentials
+  - name: gitlab-credentials
+    description: My ssh credentials
+  tasks:
+  - name: fetch-source
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: ssh-directory
+      workspace: gitlab-credentials
+    params:
+    - name: subdirectory
+      value: $(params.subdirectory)
+    - name: url
+      value: $(params.repo-url)
+    - name: revision
+      value: $(params.gitrevision-tag)
+  - name: build-push
+    runAfter: ["fetch-source"]
+    taskRef:
+      name: kaniko
+    workspaces:
+    - name: source
+      workspace: shared-data
+      subPath: $(params.subdirectory)
+    - name: dockerconfig
+      workspace: docker-credentials
+    params:
+    - name: IMAGE
+      value: $(params.container_image):$(params.gitrevision-tag)-$(params.container_tag)
+    - name: EXTRA_ARGS
+      value: [ "--skip-tls-verify" ]
+  - name: helm-install-middle
+    runAfter: ["build-push"]
+    taskRef:
+      name: helm-upgrade-from-source
+    params:
+    - name: charts_dir
+      value: $(params.charts_dir)
+    - name: releases_version
+      value: $(params.releases_version)
+    - name: release_name
+      value: $(params.release_name)
+    - name: release_namespace
+      value: $(params.release_namespace)
+    - name: overwrite_values
+      value: $(params.overwrite_values)
+    workspaces:
+    - name: source
+      workspace: shared-data
+      subPath: $(params.subdirectory)
+  finally:
+  - name: send-wechat-notification  # when expression using execution status, evaluates to false		  
+    when:
+      - input: $(tasks.status)
+        operator: in
+        values: [ "Succeeded", "Completed" ]
+    params:
+    - name: revision-name
+      value: $(params.gitrevision-tag)
+    - name: received-sha
+      value: $(params.short-sha)
+    - name: check-status
+      value: $(tasks.helm-install-middle.status)
+    taskSpec:
+      params:
+      - name: revision-name
+      - name: received-sha
+      - name: check-status
+      steps:
+        - name: send-notification
+          image: curlimages/curl
+          script: |
+            #!/usr/bin/env sh
+              if [[ "$(params.check-status)" == "Succeeded" || "$(params.check-status)" == "Completed" ]]; then
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=5fe4fe3f-3f10-4121-a61a-66bdd953bd5d' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## 中台前端部署报告
+                       > 状态:<font color=\"warning\">发布成功</font>
+                       > 项目:<font color=\"comment\">中台前端</font>
+                       > 分支:<font color=\"comment\">$(params.revision-name)</font>
+                       > 提交sha:<font color=\"comment\">$(params.received-sha)</font>
+                       > 项目地址: [Here]($(params.repo-url)) "
+                    }
+                  }'
+              else
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=5fe4fe3f-3f10-4121-a61a-66bdd953bd5d' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## 中台前端部署报告
+                       > 状态:<font color=\"warning\">发布失败</font>
+                       > 项目:<font color=\"comment\">中台前端</font>
+                       > 分支:<font color=\"comment\">$(params.revision-name)</font>
+                       > 提交sha:<font color=\"comment\">$(params.received-sha)</font>
+                       > 项目地址: [Here]($(params.repo-url)) "
+                    }
+                  }'
+                echo $(params.check-status)
+              fi

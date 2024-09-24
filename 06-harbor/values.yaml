@@ -1,0 +1,48 @@
+expose:
+  type: ingress
+  tls:
+    enabled: true
+    certSource: secret
+    auto:
+      commonName: ""
+    secret:
+      secretName: "harbor-threshold-com"
+  ingress:
+    hosts:
+      core: harbor.threshold.com
+    className: "nginx"
+externalURL: https://harbor.threshold.com:31339
+
+
+persistence:
+  persistentVolumeClaim:
+    registry:
+      storageClass: "harbor"
+      accessMode: ReadWriteMany
+      size: 10Gi
+
+    jobservice:
+      jobLog:
+        storageClass: "harbor"
+        accessMode: ReadWriteMany
+        size: 1Gi
+    chartmuseum:
+      storageClass: "harbor"
+      accessMode: ReadWriteMany
+      size: 5Gi
+
+    database:
+      storageClass: "longhorn"
+      accessMode: ReadWriteOnce
+      size: 1Gi
+    redis:
+      storageClass: "longhorn"
+      accessMode: ReadWriteOnce
+      size: 1Gi
+    trivy:
+      storageClass: "longhorn"
+      accessMode: ReadWriteOnce
+      size: 5Gi
+
+
+harborAdminPassword: "basic@123"

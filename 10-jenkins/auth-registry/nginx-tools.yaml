@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-tools
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      imagePullSecrets:
+      - name: auth-registry-secret
+      containers:
+      - name: nginx
+        image: swr.ap-southeast-4.myhuaweicloud.com/rolegend/nginx-tools:v1
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1000Mi
+          requests:
+            cpu: 200m
+            memory: 300Mi
+        ports:
+        - containerPort: 80

@@ -1,0 +1,19 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vault-issuer
+  namespace: threshold
+spec:
+  vault:
+    server: https://vault.vault:8200
+    path: pki/sign/threshold-dot-com
+    caBundleSecretRef:
+      name: ca-cert-secret
+      key: ca.crt
+    auth:
+      kubernetes:
+        mountPath: /v1/auth/kubernetes
+        role: issuer
+        secretRef:
+          name: issuer-secret  
+          key: token

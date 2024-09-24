@@ -1,0 +1,24 @@
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+# The Gateway is the main infrastructure resource that links API gateway components.
+kind: Gateway
+metadata:
+  name: api-gateway
+  namespace: consul
+spec:
+  #指定使用Consul作为实现此Gateway的网关后端
+  gatewayClassName: consul
+  # 定义 Gateway 监听的端口和协议。
+  listeners:
+    # Defines the listener protocol (HTTP, HTTPS, or TCP)
+  - protocol: HTTPS
+    port: 8443
+    name: https
+    #定义允许访问该监听器的路由规则。
+    allowedRoutes:
+      namespaces:
+        from: Same
+    tls:
+      # Defines the certificate to use for the HTTPS listener.
+      certificateRefs:
+        - name: consul-server-cert

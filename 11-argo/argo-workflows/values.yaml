@@ -1,0 +1,41 @@
+workflow:
+  serviceAccount:
+    create: true
+    name: "argo-workflow"
+  rbac:
+    create: true
+controller:
+  workflowNamespaces:
+    - default
+    - ci
+    - workflow
+server:
+  authModes:
+  - server
+  ingress:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: http
+    labels: {}
+    ingressClassName: "nginx"
+    hosts:
+    - workflow.threshold.com
+    paths:
+    - /
+    pathType: Prefix
+    tls:
+    - hosts:
+      - workflow.threshold.com
+      secretName: workflow-threshold-com 
+artifactRepository:
+  archiveLogs: true
+  s3: 
+    accessKeySecret:
+      name: "minio-cred"
+      key: accesskey
+    secretKeySecret:
+      name: "minio-cred"
+      key: secretkey
+    insecure: true
+    bucket: workflow
+    endpoint: '12.0.0.200:9000'

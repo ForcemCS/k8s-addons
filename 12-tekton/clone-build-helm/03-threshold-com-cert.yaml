@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: el-threshold-com
+  namespace: default
+spec:
+  secretName: el-threshold-com
+  issuerRef:
+    name: vault-cluster-issuer
+    kind: ClusterIssuer
+  commonName: el.threshold.com
+  dnsNames:
+  - el.threshold.com

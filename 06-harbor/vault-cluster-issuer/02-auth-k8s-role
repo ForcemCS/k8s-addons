@@ -1,0 +1,5 @@
+vault write auth/kubernetes/role/cluster-issuer \
+    bound_service_account_names="*" \
+    bound_service_account_namespaces="*" \
+    policies=pki \
+    ttl=20m

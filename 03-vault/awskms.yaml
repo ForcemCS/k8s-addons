@@ -1,0 +1,130 @@
+global:
+   enabled: true
+   tlsDisable: false
+   serverTelemetry:
+     prometheusOperator: false
+injector:
+   enabled: true
+   certs:
+     secretName: injector-tls 
+     caBundle: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxZ0F3SUJBZ0lJS2pTNTBaUDd3bll3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBMk1UY3dPREE1TWpOYUZ3MHpOREEyTVRVd09ERTBNak5hTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURCMmRMUjlmTHVheC9aalRXVEh6L0pMUzNkRmJ3akNVcCt0V00xcTFHK1lRdHdSVHFvZHd3eGdRS1IKZ0ZQNkUvZHpaQ3NJR2ZFTXJpYU41QUF5dFUzNWltNVNPbzZPSnBOMXdwc0ZlUmdvaFNEdzllcjNFc1BaWTRNUAo3eDNSN0grRWIyM1NZRmsvRjQ1dzZuRHNpUHozL3NWOUVUd3pjS0pLcE1vUllUeVAxcENLRzFRcjBCcjRQVTNhCm0wR2pkTWRZVlpVRnpEUlNxVm1EcmZScm12SStBandmWkZIazlDNHR2VGEyMzlzNFJIZ2lTWkhGZkJTOXk2cjkKcXFIRnlVVXdkdVI2MHpOVCs3KzEwWVAraVVEektkVTQ1d1I3cnBnVTJMRk1rNjEzbS9ia2lZQld2eHRNSDZZTQo0OURORS92aG1Bdlgxdmszdlc0NGtyVHdENUZmQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJTNVJOazFMTXhBNWx2QXJsbUxQcHBCR2F4Sm9qQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQytvQldxS0VSMwplRUYxT2pYaytlaGcwbkdJOE5MMVVZRU9kUVBPOUU3WFpES1RycjlFTWpNdnd4aGNOZk4zeDQyc1ozaHcrc3ZxCjJOZ1JIZzRUMmZmUlRlN3hNZUluUWpQWm1aaTROb3F3ZHFPUE9vbE1WSGFBTmxYV1QvaVpQa2o3M2s3OHl4SnoKRkp2ZWM5OEtyNnJ0WTdCb084RFNJUEFaUVA4eGc0RzYrRGRET1ZtcnZEQXAzTmlJeGl4T3hIVjZQUzg4UUdHMQoySmUyQnhvZlZ2RE5SUTk3aUU2eUgrZE9iLzB3ektLV0NUekpvekhPTlFibzFjSHJOWnNjcnRFYmhiN29uM25zCm9iVm9icFc1OVkxeWgzVzBQOVowVUJrWU5TRE1JVDhZRXBBNXFFaGdRZkZXeDgzcEptdGlFV09NMjYyZXorQnMKWmJNNGJ5Yld3dVpUCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+     certName: tls.crt
+     keyName: tls.key
+
+server:
+  #resources:
+  #   limits:
+  #     memory: 4Gi
+  #     cpu: 2000m
+   extraEnvironmentVars:
+      VAULT_CACERT: /vault/userconfig/vault-ha-tls/vault.ca
+      VAULT_TLSCERT: /vault/userconfig/vault-ha-tls/vault.crt
+      VAULT_TLSKEY: /vault/userconfig/vault-ha-tls/vault.key
+
+   extraSecretEnvironmentVars:
+     - envName: AWS_ACCESS_KEY_ID
+       secretName: xxx
+       secretKey: AWS_ACCESS_KEY_ID
+     - envName: AWS_SECRET_ACCESS_KEY
+       secretName: xxxx
+       secretKey: AWS_SECRET_ACCESS_KEY
+   volumes:
+      - name: userconfig-vault-ha-tls
+        secret:
+          defaultMode: 420
+          secretName: vault-ha-tls
+   volumeMounts:
+      - mountPath: /vault/userconfig/vault-ha-tls
+        name: userconfig-vault-ha-tls
+        readOnly: true
+   dataStorage:
+     storageClass: local-storage-vault 
+   auditStorage:
+     enabled: true
+     storageClass: local-storage-vault-audit     
+   standalone:
+      enabled: false
+   affinity: ""
+   ha:
+      enabled: true
+      replicas: 3
+      raft:
+         enabled: true
+         setNodeId: true
+         config: |
+            cluster_name = "vault-integrated-storage"
+            ui = true
+            listener "tcp" {
+               #启用tls
+               tls_disable = 0
+               #这个字段定义了Vault服务器监听传入连接的网络接口,通常也可以认为是 Vault API（CLI,应用程序与之交互） 的地址
+               address = "[::]:8200"
+               #Vault集群内部节点之间进行通信的地址。其他 Vault 节点会使用这个地址来连接到当前节点，进行数据同步、领导者选举等操作。
+               cluster_address = "[::]:8201"
+               tls_cert_file = "/vault/userconfig/vault-ha-tls/vault.crt"
+               tls_key_file  = "/vault/userconfig/vault-ha-tls/vault.key"
+               tls_client_ca_file = "/vault/userconfig/vault-ha-tls/vault.ca"
+
+               telemetry {
+                 unauthenticated_metrics_access = "true"
+               }
+            }
+
+            telemetry {
+              disable_hostname = true
+              prometheus_retention_time = "12h"
+            }
+
+            seal "awskms" {
+              region     = "us-east-1"
+              kms_key_id = "baa2dabxxxxxxxxxxxxx"
+            }
+            storage "raft" {
+              path = "/vault/data"
+              retry_join {
+                leader_api_addr = "https://vault-0.vault-internal:8200"
+                leader_ca_cert_file = "/vault/userconfig/vault-ha-tls/vault.ca"
+                leader_client_cert_file = "/vault/userconfig/vault-ha-tls/vault.crt"
+                leader_client_key_file = "/vault/userconfig/vault-ha-tls/vault.key"
+              }
+              retry_join {
+                leader_api_addr = "https://vault-1.vault-internal:8200"
+                leader_ca_cert_file = "/vault/userconfig/vault-ha-tls/vault.ca"
+                leader_client_cert_file = "/vault/userconfig/vault-ha-tls/vault.crt"
+                leader_client_key_file = "/vault/userconfig/vault-ha-tls/vault.key"
+              }
+              retry_join {
+                leader_api_addr = "https://vault-2.vault-internal:8200"
+                leader_ca_cert_file = "/vault/userconfig/vault-ha-tls/vault.ca"
+                leader_client_cert_file = "/vault/userconfig/vault-ha-tls/vault.crt"
+                leader_client_key_file = "/vault/userconfig/vault-ha-tls/vault.key"
+              }
+              autopilot {
+                server_stabilization_time = "10s"
+                last_contact_threshold = "10s"
+                min_quorum = 5
+                cleanup_dead_servers = false
+                dead_server_last_contact_threshold = "10m"
+                max_trailing_logs = 1000
+                disable_upgrade_migration = false
+              }
+            }
+            disable_mlock = true
+            #假设您有一个应用程序需要与 Vault 交互以获取密钥。 通过服务注册，您的应用程序可以使用 Kubernetes 选择器来查找标记为 “active” 的 Vault Pod，从而确保它始终连接到可用的 Vault 实例。
+            service_registration "kubernetes" {}
+# Vault UI
+ui:
+  enabled: true
+  serviceType: "NodePort"
+  serviceNodePort: null
+  externalPort: 8200
+serverTelemetry:
+  serviceMonitor:
+    enabled: false
+    selectors: {}
+    interval: 30s
+    scrapeTimeout: 10s
+#  prometheusRules:
+#      enabled: false
+#      selectors: {}
+#      rules: []

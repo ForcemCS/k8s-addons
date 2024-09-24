@@ -1,0 +1,57 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-job
+  namespace: default
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-job
+  namespace: default
+spec:
+  selector:
+    app: test-job
+  ports:
+    - port: 80
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+   name: test-job
+   namespace: default
+   labels:
+     app: test-job
+spec:
+  template:
+    metadata:
+      annotations:
+        'consul.hashicorp.com/connect-inject': 'true'
+        #表示 sidecar 代理在 Pod 终止前等待网络请求完成的时间（以秒为单位）。
+        'consul.hashicorp.com/sidecar-proxy-lifecycle-shutdown-grace-period-seconds': '5'
+      labels:
+        app: test-job
+    spec:
+      containers:
+      - name: test-job
+        image: alpine/curl:3.14
+        ports:
+        - containerPort: 80
+        command:
+          - /bin/sh
+          - -c
+          - |
+            echo "Started test job"
+            sleep 10
+            echo "Killing proxy"
+            #触发优雅关闭: 在 Job 的 Pod 中，你需要在任务完成后向 sidecar 代理发送一个 http://127.0.0.1:20600/graceful_shutdown 请求。这会通知 sidecar 代理停止接受新的连接，并等待现有连接关闭或超时。
+            curl --max-time 2 -s -f -X POST http://127.0.0.1:20600/graceful_shutdown
+            sleep 10
+            echo "Ended test job"
+      serviceAccountName: test-job
+      restartPolicy: Never
+## 工作原理
+#当 Kubernetes 决定终止 Job 的 Pod 时，它会先发送一个 SIGTERM 信号。
+#sidecar 代理收到 SIGTERM 信号后，会进入优雅关闭状态，停止接受新的连接，并等待现有连接关闭或超时。
+#一旦所有连接都已关闭或超时，或者达到了 shutdown-grace-period-seconds 设置的时间，sidecar 代理就会退出，Kubernetes 随后会完全终止 Pod。

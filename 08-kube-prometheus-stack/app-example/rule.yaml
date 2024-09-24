@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  annotations:
+    meta.helm.sh/release-name: prometheus-stack
+    meta.helm.sh/release-namespace: monitoring
+    prometheus-operator-validated: "true"
+  labels:
+    app: kube-prometheus-stack
+    app.kubernetes.io/instance: prometheus-stack
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: kube-prometheus-stack
+    app.kubernetes.io/version: 61.2.0
+    chart: kube-prometheus-stack-61.2.0
+    heritage: Helm
+    release: prometheus-stack
+  name: prometheus-stack-kube-prom-general.app-1
+  namespace: monitoring
+spec:
+  groups:
+  - name: app-1-service-alerts
+    rules:
+    - alert: DemoServiceInstanceDown
+      expr: count(up{job="app-1-service"}) < 3
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        title: 'Instance {{ $labels.instance }} of {{ $labels.job }} down'
+        description: 'Unable to scrape instance {{ $labels.instance }} of {{ $labels.job }}.'

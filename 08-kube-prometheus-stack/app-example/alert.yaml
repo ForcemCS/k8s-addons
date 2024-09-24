@@ -1,0 +1,49 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: app-1-service-alter
+  namespace: monitoring
+spec:
+  route:
+    # 将具有相同alert name and job的警报合并为一个通知.
+    groupBy: ['alertname', 'job']
+    #continue: false
+    # 等待 30 秒后再发送通知到组。
+    groupWait: 30s
+    # 为组中的新警报发送后续通知前等待 2 分钟。
+    groupInterval: 2m
+    # 等待 3 小时后再重复相同的通知。
+    repeatInterval: 3h
+    # By default, send notifications to team A's Slack channel.
+    receiver: wechat
+    # Child routes with job-specific matchers & overrides.
+    matchers:
+    - name: app
+      value: app-1
+      matchType: =
+    - name: namespace
+      value: default
+      matchType: =
+    routes:
+    - matchers:
+      - matchType: =
+        name: alertname
+        value: DemoServiceInstanceDown
+      receiver: wechat
+  receivers:
+  - name: 'wechat'
+    wechatConfigs:
+    - sendResolved: true
+      message: '{{ template "wechat.default.message" . }}'
+      apiURL: "https://qyapi.weixin.qq.com/cgi-bin/"
+      toParty: '1'         
+      agentID: '1000002'
+      corpID: "ww3ef8df46db59fd4e"
+      apiSecret:
+        name: wechat-api-secret
+        key: api-key
+            
+      
+#kubectl -n monitoring  create secret  generic wechat-api-secret \
+#  --from-literal=api-key="8UZQJsSg3u9rDs6B0SfntAd0tCe1HY4ZYcWVWK-rGVI"
+    

@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ssh-key
+  annotations:
+    tekton.dev/git-0: gitlab.x.xinghuihuyu.cn # Described below
+type: kubernetes.io/ssh-auth
+stringData:
+  ssh-privatekey: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+    QyNTUxOQAAACB6PtIMnD+eRJhZSFsvMAU137WXdPNUzSzfjxqyZhJ5LgAAAJBHE17wRxNe
+    8AAAAAtzc2gtZWQyNTUxOQAAACB6PtIMnD+eRJhZSFsvMAU137WXdPNUzSzfjxqyZhJ5Lg
+    AAAEDD5Afw73gKRX41VHqIXkUhQrw5aN2C8vhhkBXlciCE4Ho+0gycP55EmFlIWy8wBTXf
+    tZd081TNLN+PGrJmEnkuAAAADXJvb3RAbWFzdGVyMDE=
+    -----END OPENSSH PRIVATE KEY-----
+  known_hosts: |
+    gitlab.x.xinghuihuyu.cn ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC27yO//0LTZlotwkEpDPombo2HW/7jpMLd8sg4Bq+f7A4thBJqGciop5jnkOExi+ZVMeGaULBdgAxcY4/2nY5T0lRavAeKkfcSPKJ4nk8yRjHwqYA4zen5X3l5YC8AuD47zmhf0vIKLycs8U1045Yei3MDDCp/7WrY4bNLKA+Uppe2+OAkQWRBvbXBydB4sRlaupXehdUoCN1hERV36n2XviDyXoLOvLzO5eOtndEKfZlMmZ/0YHwmO9hvdCyu/+Rbauv/RUMx/gppY5dvufIrU52Wr0m9YUdswdnX8AWOzRrwA5C3riiMZiiSTJ8vw7tzzsav+v7+Kx02E/MMDKwKW4MWedDncXqhgFS50I8PDMal/I9mwpylu4uPoQ74xecFhjc18Ljw7DF3Z4e49xxOcXgQOae2P2oslsF53pHE4vq0YgKHaGer09Vffc2NvbEf9YQ/BrWpb5JLjq/5kXZ9sBPw2d0oforLLCOoKmDEZd7HpIrSR8HyZVgo7Fwvmhc=
+    gitlab.x.xinghuihuyu.cn ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOl2F+nCEqS7Mwpnh0kh80u542JADlUoZXglgq1DzEPp
+    gitlab.x.xinghuihuyu.cn ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBPDke03ZUYisBeSeOgHbb5Q34s9DiCScG2U+coCRd7LdaWaq0fJBXnGf2coI60Gb07Vu6lCRitUYFCMi0srPe+I=
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pipeline-bot
+secrets:
+  - name: ssh-key

@@ -1,0 +1,33 @@
+#默认的禁止策略
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+ name: default-website-network-policy
+ namespace: website
+spec:
+ podSelector: {}
+ policyTypes:
+ - Egress
+ egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+ name: default-database-network-policy
+ namespace: database
+spec:
+ podSelector: {}
+ policyTypes:
+ - Egress
+ egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+ name: default-backup-network-policy
+ namespace: backup-system
+spec:
+ podSelector: {}
+ policyTypes:
+ - Egress
+ egress: []

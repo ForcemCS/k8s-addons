@@ -1,0 +1,379 @@
+global:
+  enabled: true
+  namespace: ""
+  imagePullSecrets: []
+  tlsDisable: true
+  externalVaultAddr: ""
+  openshift: false
+  psp:
+    enable: false
+    annotations: |
+      seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default,runtime/default
+      apparmor.security.beta.kubernetes.io/allowedProfileNames: runtime/default
+      seccomp.security.alpha.kubernetes.io/defaultProfileName:  runtime/default
+      apparmor.security.beta.kubernetes.io/defaultProfileName:  runtime/default
+  serverTelemetry:
+    prometheusOperator: false
+injector:
+  enabled: "-"
+  replicas: 1
+  port: 8080
+  leaderElector:
+    enabled: true
+  metrics:
+    enabled: false
+  externalVaultAddr: ""
+  image:
+    repository: "hashicorp/vault-k8s"
+    tag: "1.4.1"
+    pullPolicy: IfNotPresent
+  agentImage:
+    repository: "hashicorp/vault"
+    tag: "1.16.1"
+  agentDefaults:
+    cpuLimit: "500m"
+    cpuRequest: "250m"
+    memLimit: "128Mi"
+    memRequest: "64Mi"
+    template: "map"
+    templateConfig:
+      exitOnRetryFailure: true
+      staticSecretRenderInterval: ""
+  livenessProbe:
+    failureThreshold: 2
+    initialDelaySeconds: 5
+    periodSeconds: 2
+    successThreshold: 1
+    timeoutSeconds: 5
+  readinessProbe:
+    failureThreshold: 2
+    initialDelaySeconds: 5
+    periodSeconds: 2
+    successThreshold: 1
+    timeoutSeconds: 5
+  startupProbe:
+    failureThreshold: 12
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 5
+  authPath: "auth/kubernetes"
+  logLevel: "info"
+  logFormat: "standard"
+  revokeOnShutdown: false
+  webhook:
+    failurePolicy: Ignore
+    matchPolicy: Exact
+    timeoutSeconds: 30
+    namespaceSelector: {}
+    objectSelector: |
+      matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: NotIn
+        values:
+        - {{ template "vault.name" . }}-agent-injector
+    annotations: {}
+  failurePolicy: Ignore
+  namespaceSelector: {}
+  objectSelector: {}
+  webhookAnnotations: {}
+  certs:
+    secretName: null
+    caBundle: ""
+    certName: tls.crt
+    keyName: tls.key
+  securityContext:
+    pod: {}
+    container: {}
+  resources: {}
+  extraEnvironmentVars: {}
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ template "vault.name" . }}-agent-injector
+              app.kubernetes.io/instance: "{{ .Release.Name }}"
+              component: webhook
+          topologyKey: kubernetes.io/hostname
+  topologySpreadConstraints: []
+  tolerations: []
+  nodeSelector: {}
+  priorityClassName: ""
+  annotations: {}
+  extraLabels: {}
+  hostNetwork: false
+  service:
+    annotations: {}
+  serviceAccount:
+    annotations: {}
+  podDisruptionBudget: {}
+  strategy: {}
+server:
+  enabled: "-"
+  enterpriseLicense:
+    secretName: ""
+    secretKey: "license"
+  image:
+    repository: "hashicorp/vault"
+    tag: "1.16.1"
+    pullPolicy: IfNotPresent
+  updateStrategyType: "OnDelete"
+  logLevel: ""
+  logFormat: ""
+  resources: {}
+  ingress:
+    enabled: false
+    labels: {}
+    annotations: {}
+    ingressClassName: ""
+    pathType: Prefix
+    activeService: true
+    hosts:
+      - host: chart-example.local
+        paths: []
+    extraPaths: []
+    tls: []
+  hostAliases: []
+  route:
+    enabled: false
+    activeService: true
+    labels: {}
+    annotations: {}
+    host: chart-example.local
+    tls:
+      termination: passthrough
+  authDelegator:
+    enabled: true
+  extraInitContainers: null
+  extraContainers: null
+  shareProcessNamespace: false
+  extraArgs: ""
+  extraPorts: null
+  readinessProbe:
+    enabled: true
+    port: 8200
+    failureThreshold: 2
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 3
+  livenessProbe:
+    enabled: false
+    execCommand: []
+    path: "/v1/sys/health?standbyok=true"
+    port: 8200
+    failureThreshold: 2
+    initialDelaySeconds: 60
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 3
+  terminationGracePeriodSeconds: 10
+  preStopSleepSeconds: 5
+  postStart: []
+  extraEnvironmentVars: {}
+  extraSecretEnvironmentVars: []
+  extraVolumes: []
+  volumes: null
+  volumeMounts: null
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ template "vault.name" . }}
+              app.kubernetes.io/instance: "{{ .Release.Name }}"
+              component: server
+          topologyKey: kubernetes.io/hostname
+  topologySpreadConstraints: []
+  tolerations: []
+  nodeSelector: {}
+  networkPolicy:
+    enabled: false
+    egress: []
+    ingress:
+      - from:
+        - namespaceSelector: {}
+        ports:
+        - port: 8200
+          protocol: TCP
+        - port: 8201
+          protocol: TCP
+  priorityClassName: ""
+  extraLabels: {}
+  annotations: {}
+  configAnnotation: false
+  service:
+    enabled: true
+    active:
+      enabled: true
+      annotations: {}
+    standby:
+      enabled: true
+      annotations: {}
+    instanceSelector:
+      enabled: true
+    ipFamilyPolicy: ""
+    ipFamilies: []
+    publishNotReadyAddresses: true
+    externalTrafficPolicy: Cluster
+    port: 8200
+    targetPort: 8200
+    annotations: {}
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    mountPath: "/vault/data"
+    storageClass: null
+    accessMode: ReadWriteOnce
+    annotations: {}
+    labels: {}
+  persistentVolumeClaimRetentionPolicy: {}
+  auditStorage:
+    enabled: false
+    size: 10Gi
+    mountPath: "/vault/audit"
+    storageClass: null
+    accessMode: ReadWriteOnce
+    annotations: {}
+    labels: {}
+  dev:
+    enabled: false
+    devRootToken: "root"
+  standalone:
+    enabled: "-"
+    config: |
+      ui = true
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+      storage "file" {
+        path = "/vault/data"
+      }
+  ha:
+    enabled: false
+    replicas: 3
+    apiAddr: null
+    clusterAddr: null
+    raft:
+      enabled: false
+      setNodeId: false
+      config: |
+        ui = true
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+        storage "raft" {
+          path = "/vault/data"
+        }
+        service_registration "kubernetes" {}
+    config: |
+      ui = true
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+      }
+      service_registration "kubernetes" {}
+    disruptionBudget:
+      enabled: true
+      maxUnavailable: null
+  serviceAccount:
+    create: true
+    name: ""
+    createSecret: false
+    annotations: {}
+    extraLabels: {}
+    serviceDiscovery:
+      enabled: true
+  statefulSet:
+    annotations: {}
+    securityContext:
+      pod: {}
+      container: {}
+  hostNetwork: false
+ui:
+  enabled: false
+  publishNotReadyAddresses: true
+  activeVaultPodOnly: false
+  serviceType: "ClusterIP"
+  serviceNodePort: null
+  externalPort: 8200
+  targetPort: 8200
+  serviceIPFamilyPolicy: ""
+  serviceIPFamilies: []
+  externalTrafficPolicy: Cluster
+  annotations: {}
+csi:
+  enabled: false
+  image:
+    repository: "hashicorp/vault-csi-provider"
+    tag: "1.4.2"
+    pullPolicy: IfNotPresent
+  volumes: null
+  volumeMounts: null
+  resources: {}
+  hmacSecretName: ""
+  daemonSet:
+    updateStrategy:
+      type: RollingUpdate
+      maxUnavailable: ""
+    annotations: {}
+    providersDir: "/etc/kubernetes/secrets-store-csi-providers"
+    kubeletRootDir: "/var/lib/kubelet"
+    extraLabels: {}
+    securityContext:
+      pod: {}
+      container: {}
+  pod:
+    annotations: {}
+    tolerations: []
+    nodeSelector: {}
+    affinity: {}
+    extraLabels: {}
+  agent:
+    enabled: true
+    extraArgs: []
+    image:
+      repository: "hashicorp/vault"
+      tag: "1.16.1"
+      pullPolicy: IfNotPresent
+    logFormat: standard
+    logLevel: info
+    resources: {}
+  priorityClassName: ""
+  serviceAccount:
+    annotations: {}
+    extraLabels: {}
+  readinessProbe:
+    failureThreshold: 2
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 3
+  livenessProbe:
+    failureThreshold: 2
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 3
+  debug: false
+  extraArgs: []
+serverTelemetry:
+  serviceMonitor:
+    enabled: false
+    selectors: {}
+    interval: 30s
+    scrapeTimeout: 10s
+  prometheusRules:
+      enabled: false
+      selectors: {}
+      rules: []

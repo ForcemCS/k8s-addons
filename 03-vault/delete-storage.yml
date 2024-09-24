@@ -1,0 +1,24 @@
+- hosts: all
+  become: true
+  tasks:
+  - name: 检测/vault/data/ 是否存在
+    file:
+      path: /vault/data/
+      state: directory
+    delegate_to: "{{ inventory_hostname }}"
+
+  - name: 找到要删除的文件或目录
+    find:
+      paths: /vault/data/
+      recurse: yes # 使用 recurse 参数代替 recursive
+    register: files_to_delete
+
+  - name: 删除/vault/data/下的所有内容
+    # 使用循环遍历每个文件或目录
+    loop: "{{ files_to_delete.files }}"
+    # 使用 item.path 获取每个文件的路径
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    delegate_to: "{{ inventory_hostname }}"
+    when: files_to_delete.matched > 0

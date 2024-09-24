@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: output-parameter-
+spec:
+  serviceAccountName: argo-workflow 
+  entrypoint: output-parameter
+  templates:
+  - name: output-parameter
+    steps:
+    - - name: generate-parameter
+        template: hello-world-to-file
+    - - name: consume-parameter
+        template: print-message
+        arguments:
+          parameters:
+          # Pass the hello-param output from the generate-parameter step as the message input to print-message
+          - name: message
+            value: "{{steps.generate-parameter.outputs.parameters.hello-param}}"
+    - - name: print-ts
+        template: current-ts
+          
+  - name: hello-world-to-file
+    container:
+      image: busybox
+      command: [sh, -c]
+      args: ["echo -n hello world > /tmp/hello_world.txt"]  # generate the content of hello_world.txt
+    outputs:
+      parameters:
+      - name: hello-param  # name of output parameter
+        valueFrom:
+          path: /tmp/hello_world.txt # set the value of hello-param to the contents of this hello-world.txt
+
+  - name: print-message
+    inputs:
+      parameters:
+      - name: message
+    container:
+      image: busybox
+      command: [echo]
+      args: ["{{inputs.parameters.message}}"]
+  - name: current-ts
+    script:
+      image: zshusers/zsh:4.3.15
+      env:
+        - name: TZ
+          value: "Asia/Shanghai"
+      command: [ zsh ]
+      source: |
+        date  +"%Y%m%d-%H-%M-%S" | tr -d '\n'

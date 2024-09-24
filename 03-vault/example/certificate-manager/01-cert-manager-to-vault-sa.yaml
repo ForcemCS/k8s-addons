@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: issuer
+  namespace: threshold
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: issuer-secret
+  namespace: threshold
+  annotations:
+    kubernetes.io/service-account.name: issuer
+type: kubernetes.io/service-account-token

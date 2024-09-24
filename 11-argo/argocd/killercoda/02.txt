@@ -1,0 +1,6 @@
+controlplane $ argocd app create app-2 --repo https://github.com/mabusaa/argocd-example-apps.git --revision master --path guestbook --dest-server https://kubernetes.default.svc --dest-namespace app-2 --sync-option CreateNamespace=true --grpc-web
+application 'app-2' created
+controlplane $ argocd app list --grpc-web
+NAME   CLUSTER                         NAMESPACE  PROJECT  STATUS     HEALTH   SYNCPOLICY  CONDITIONS  REPO                                                PATH       TARGET
+app-2  https://kubernetes.default.svc  app-2      default  OutOfSync  Missing  <none>      <none>      https://github.com/mabusaa/argocd-example-apps.git  guestbook  master
+controlplane $ argocd app sync app-2 --grpc-web

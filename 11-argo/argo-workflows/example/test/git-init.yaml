@@ -1,0 +1,269 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: test-clone-08-
+  namespace: ci
+  annotations:
+    workflows.argoproj.io/description: |
+      This workflow template clones a Git repository into a specified directory.
+
+      It supports various options like sparse checkout, submodule initialization,
+      shallow cloning, and authentication using SSH or basic auth.
+spec:
+  serviceAccountName: argo-workflow
+  entrypoint: main
+  arguments:
+    parameters:
+    - name: url
+      value: 'http://gitlab.x.xinghuihuyu.cn/flux-cd/app-demo.git'
+    - name: revision
+      value: ""
+    - name: refspec
+      value: ""
+    - name: submodules
+      value: "true"
+    - name: depth
+      value: "1"
+    - name: sslVerify
+      value: "true"
+    - name: crtFileName
+      value: "ca-bundle.crt"
+    - name: subdirectory
+      value: "ccc"
+    - name: sparseCheckoutDirectories
+      value: ""
+    - name: deleteExisting
+      value: "true"
+    - name: httpProxy
+      value: ""
+    - name: httpsProxy
+      value: ""
+    - name: noProxy
+      value: ""
+    - name: verbose
+      value: "true"
+    - name: gitInitImage
+      value: "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.40.2"
+    - name: userHome
+      value: "/home/git"
+  volumes:
+  - name: output
+    persistentVolumeClaim:
+      claimName: workflow-space
+  - name: ssh-directory
+    secret:
+      secretName: git-credentials 
+  templates:
+  - name: main
+    inputs:
+      parameters:
+      - name: url
+      - name: revision
+      - name: refspec
+      - name: submodules
+      - name: depth
+      - name: sslVerify
+      - name: crtFileName
+      - name: subdirectory
+      - name: sparseCheckoutDirectories
+      - name: deleteExisting
+      - name: httpProxy
+      - name: httpsProxy
+      - name: noProxy
+      - name: verbose
+      - name: gitInitImage
+      - name: userHome
+    steps:
+    - - name: clone-repository
+        template: clone-step
+        arguments:
+          parameters:
+          - name: url
+            value: "{{inputs.parameters.url}}"
+          - name: revision
+            value: "{{inputs.parameters.revision}}"
+          - name: refspec
+            value: "{{inputs.parameters.refspec}}"
+          - name: submodules
+            value: "{{inputs.parameters.submodules}}"
+          - name: depth
+            value: "{{inputs.parameters.depth}}"
+          - name: sslVerify
+            value: "{{inputs.parameters.sslVerify}}"
+          - name: crtFileName
+            value: "{{inputs.parameters.crtFileName}}"
+          - name: subdirectory
+            value: "{{inputs.parameters.subdirectory}}"
+          - name: sparseCheckoutDirectories
+            value: "{{inputs.parameters.sparseCheckoutDirectories}}"
+          - name: deleteExisting
+            value: "{{inputs.parameters.deleteExisting}}"
+          - name: httpProxy
+            value: "{{inputs.parameters.httpProxy}}"
+          - name: httpsProxy
+            value: "{{inputs.parameters.httpsProxy}}"
+          - name: noProxy
+            value: "{{inputs.parameters.noProxy}}"
+          - name: verbose
+            value: "{{inputs.parameters.verbose}}"
+          - name: gitInitImage
+            value: "{{inputs.parameters.gitInitImage}}"
+          - name: userHome
+            value: "{{inputs.parameters.userHome}}"
+  - name: clone-step
+    sidecars:
+    - name: fix-permissions
+      image: busybox
+      command: ["sh", "-c", "chown -R 65532:65532 /workspace/output"]
+      volumeMounts:
+      - name: output
+        mountPath: /workspace/output
+    inputs:
+      parameters:
+      - name: url
+      - name: revision
+      - name: refspec
+      - name: submodules
+      - name: depth
+      - name: sslVerify
+      - name: crtFileName
+      - name: subdirectory
+      - name: sparseCheckoutDirectories
+      - name: deleteExisting
+      - name: httpProxy
+      - name: httpsProxy
+      - name: noProxy
+      - name: verbose
+      - name: gitInitImage
+      - name: userHome
+    outputs:
+      artifacts:
+      - name: cloned-repository
+        path: /workspace/output/{{inputs.parameters.subdirectory}}
+        archive:
+          none: {}
+    script:
+      image: "{{inputs.parameters.gitInitImage}}"
+      volumeMounts:
+      - name: output
+        mountPath: /workspace/output
+      - name: ssh-directory
+        mountPath: /workspace/ssh-directory
+        readOnly: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+      env:
+      - name: HOME
+        value: "{{inputs.parameters.userHome}}"
+      - name: PARAM_URL
+        value: "{{inputs.parameters.url}}"
+      - name: PARAM_REVISION
+        value: "{{inputs.parameters.revision}}"
+      - name: PARAM_REFSPEC
+        value: "{{inputs.parameters.refspec}}"
+      - name: PARAM_SUBMODULES
+        value: "{{inputs.parameters.submodules}}"
+      - name: PARAM_DEPTH
+        value: "{{inputs.parameters.depth}}"
+      - name: PARAM_SSL_VERIFY
+        value: "{{inputs.parameters.sslVerify}}"
+      - name: PARAM_CRT_FILENAME
+        value: "{{inputs.parameters.crtFileName}}"
+      - name: PARAM_SUBDIRECTORY
+        value: "{{inputs.parameters.subdirectory}}"
+      - name: PARAM_DELETE_EXISTING
+        value: "{{inputs.parameters.deleteExisting}}"
+      - name: PARAM_HTTP_PROXY
+        value: "{{inputs.parameters.httpProxy}}"
+      - name: PARAM_HTTPS_PROXY
+        value: "{{inputs.parameters.httpsProxy}}"
+      - name: PARAM_NO_PROXY
+        value: "{{inputs.parameters.noProxy}}"
+      - name: PARAM_VERBOSE
+        value: "{{inputs.parameters.verbose}}"
+      - name: PARAM_SPARSE_CHECKOUT_DIRECTORIES
+        value: "{{inputs.parameters.sparseCheckoutDirectories}}"
+      - name: PARAM_USER_HOME
+        value: "{{inputs.parameters.userHome}}"
+      - name: WORKSPACE_OUTPUT_PATH
+        value: /workspace/output
+      - name: WORKSPACE_SSH_DIRECTORY_BOUND
+        value: "true"
+      - name: WORKSPACE_SSH_DIRECTORY_PATH
+        value: /workspace/ssh-directory
+      - name: WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND
+        value: "false"
+      - name: WORKSPACE_BASIC_AUTH_DIRECTORY_PATH
+      - name: WORKSPACE_SSL_CA_DIRECTORY_BOUND
+        value: "false"
+      - name: WORKSPACE_SSL_CA_DIRECTORY_PATH
+      command: [sh]
+      source: |
+        sleep 10
+        set -eu
+
+        if [ "${PARAM_VERBOSE}" = "true" ] ; then
+          set -x
+        fi
+
+        if [ "${WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND}" = "true" ] ; then
+          cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" "${PARAM_USER_HOME}/.git-credentials"
+          cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig" "${PARAM_USER_HOME}/.gitconfig"
+          chmod 400 "${PARAM_USER_HOME}/.git-credentials"
+          chmod 400 "${PARAM_USER_HOME}/.gitconfig"
+        fi
+
+        if [ "${WORKSPACE_SSH_DIRECTORY_BOUND}" = "true" ] ; then
+          cp -R "${WORKSPACE_SSH_DIRECTORY_PATH}" "${PARAM_USER_HOME}"/.ssh
+          chmod 700 "${PARAM_USER_HOME}"/.ssh
+          chmod -R 400 "${PARAM_USER_HOME}"/.ssh/*
+        fi
+
+        if [ "${WORKSPACE_SSL_CA_DIRECTORY_BOUND}" = "true" ] ; then
+           export GIT_SSL_CAPATH="${WORKSPACE_SSL_CA_DIRECTORY_PATH}"
+           if [ "${PARAM_CRT_FILENAME}" != "" ] ; then
+              export GIT_SSL_CAINFO="${WORKSPACE_SSL_CA_DIRECTORY_PATH}/${PARAM_CRT_FILENAME}"
+           fi
+        fi
+        CHECKOUT_DIR="${WORKSPACE_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
+
+        cleandir() {
+          # Delete any existing contents of the repo directory if it exists.
+          #
+          # We don't just "rm -rf ${CHECKOUT_DIR}" because ${CHECKOUT_DIR} might be "/"
+          # or the root of a mounted volume.
+          if [ -d "${CHECKOUT_DIR}" ] ; then
+            # Delete non-hidden files and directories
+            rm -rf "${CHECKOUT_DIR:?}"/*
+            # Delete files and directories starting with . but excluding ..
+            rm -rf "${CHECKOUT_DIR}"/.[!.]*
+            # Delete files and directories starting with .. plus any other character
+            rm -rf "${CHECKOUT_DIR}"/..?*
+          fi
+        }
+
+        if [ "${PARAM_DELETE_EXISTING}" = "true" ] ; then
+          cleandir || true
+        fi
+
+        test -z "${PARAM_HTTP_PROXY}" || export HTTP_PROXY="${PARAM_HTTP_PROXY}"
+        test -z "${PARAM_HTTPS_PROXY}" || export HTTPS_PROXY="${PARAM_HTTPS_PROXY}"
+        test -z "${PARAM_NO_PROXY}" || export NO_PROXY="${PARAM_NO_PROXY}"
+
+        git config --global --add safe.directory "${WORKSPACE_OUTPUT_PATH}"
+        /ko-app/git-init \
+          -url="${PARAM_URL}" \
+          -revision="${PARAM_REVISION}" \
+          -refspec="${PARAM_REFSPEC}" \
+          -path="${CHECKOUT_DIR}" \
+          -sslVerify="${PARAM_SSL_VERIFY}" \
+          -submodules="${PARAM_SUBMODULES}" \
+          -depth="${PARAM_DEPTH}" \
+          -sparseCheckoutDirectories="${PARAM_SPARSE_CHECKOUT_DIRECTORIES}"
+        cd "${CHECKOUT_DIR}"
+        RESULT_SHA="$(git rev-parse HEAD)"
+        EXIT_CODE="$?"
+        if [ "${EXIT_CODE}" != 0 ] ; then
+          exit "${EXIT_CODE}"
+        fi

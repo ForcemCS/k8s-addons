@@ -1,0 +1,25 @@
+controller:
+  containerEnv:
+  - name: TZ
+    value: "Asia/Shanghai"
+  jenkinsAdminEmail: kuiinative@gmail.com
+  admin:
+    username: "admin"
+    password: "basic123@"
+  jenkinsUrl: https://jenkins.threshold.com:31339
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: "nginx"
+    hostName: jenkins.threshold.com
+    tls:
+    - hosts:
+      - jenkins.threshold.com
+      secretName: jenkins-threshold-com
+#agent:
+#  workspaceVolume:
+#    type: HostPath
+#    hostPath: /jenkins/agent
+persistence:
+  enabled: true
+  storageClass: local-storage-jenkins

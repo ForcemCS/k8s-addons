@@ -1,0 +1,49 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: clone-build-helm-
+spec:
+  pipelineRef:
+    name: clone-build-helm
+  taskRunSpecs:
+  - pipelineTaskName: helm-install-middle
+    serviceAccountName: tekton-helm-sa
+  taskRunTemplate:
+    serviceAccountName: tekton-triggers-example-sa
+    podTemplate:
+      securityContext:
+        fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    persistentVolumeClaim:
+      claimName: push-image-pvc
+  - name: docker-credentials
+    secret:
+      secretName: harbor-secret
+      items:
+        - key: .dockerconfigjson
+          path: config.json
+  - name: gitlab-credentials
+    secret:
+      secretName: git-credentials
+  params:
+  - name: repo-url
+    value: http://gitlab.x.xinghuihuyu.cn/client/qhyj_middle_proj.git
+  - name: subdirectory
+    value: qhyj_middle_proj
+  - name: container_image
+    value: harbor.threshold.com:31339/tekton/middle
+  - name: container_tag
+    value: test
+  - name: gitrevision-tag
+    value: master
+  - name: charts_dir
+    value: helm
+  - name: releases_version
+    value: v1
+  - name: release_name
+    value: middle
+  - name: release_namespace
+    value: default
+  - name: overwrite_values
+    value: "namespace=default,image.repo=harbor.threshold.com:31339/tekton/middle,image.tag=master-06461612" 

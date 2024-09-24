@@ -1,0 +1,20 @@
+#此集群使用containerd,dokcer的安装请参加官网
+安装containerd（使用dokcer-ce的镜像仓库安装）
+1.sudo apt-get remove docker docker-engine docker.io
+  sudo apt-get install apt-transport-https ca-certificates curl gnupg2 software-properties-common
+2.curl -fsSL https://repo.huaweicloud.com/docker-ce/linux/ubuntu/gpg | sudo apt-key add -
+3.sudo add-apt-repository "deb [arch=amd64] https://repo.huaweicloud.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable"
+4.sudo apt-get update
+  sudo apt-get install containerd.io
+
+-----
+先决条件，参见官方文档，搜索Container Runtimes
+在 Linux 上，containerd 的默认 CRI 套接字是 /run/containerd/containerd.sock
+
+需要修改的内容为
+1.配置 systemd cgroup 驱动
+containerd config default > /etc/containerd/config.toml #打印默认配置
+修改 SystemdCgroup = true
+2.配置镜像加速 #在 [plugins."io.containerd.grpc.v1.cri".registry]上下文中修改
+具体的配置请参考https://github.com/containerd/containerd/blob/main/docs/cri/config.md#registry-configuration
+

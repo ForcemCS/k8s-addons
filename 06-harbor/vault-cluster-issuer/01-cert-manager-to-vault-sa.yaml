@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-issuer
+  namespace: cert-manager  
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-issuer-secret
+  namespace: cert-manager 
+  annotations:
+    kubernetes.io/service-account.name: cluster-issuer
+type: kubernetes.io/service-account-token

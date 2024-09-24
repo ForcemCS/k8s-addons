@@ -1,0 +1,9 @@
+helm fetch  prometheus-community/kube-prometheus-stack  --version 61.2.0  --untar=true 
+
+kubectl -n monitoring create secret generic thanos-cos-config --from-file=thanos.yaml=./tx-cos.yaml
+
+helm  -n monitoring  install prometheus-stack   prometheus-community/kube-prometheus-stack --version 61.2.0 --values thanos-sidecar.yaml
+
+thanos-sidecar:
+  grpc: 10901 
+  http: 10902

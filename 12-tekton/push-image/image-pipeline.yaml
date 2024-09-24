@@ -1,0 +1,138 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: push-image
+spec:
+  description: |
+    This pipeline clones a git repo, builds a Docker image with Kaniko and
+    pushes it to a registry    
+  params:
+  - name: repo-url
+    type: string
+    description: GitLab的项目地址
+  - name: subdirectory
+    type: string
+  - name: gitrevision-tag
+    type: string
+    description: 项目分支名称
+  - name: container_image
+  - name: overwrite_values
+  workspaces:
+  - name: shared-data
+  - name: docker-credentials
+  - name: gitlab-credentials
+    description: My ssh credentials
+  tasks:
+  - name: fetch-source
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: ssh-directory
+      workspace: gitlab-credentials
+    params:
+    - name: subdirectory
+      value: $(params.subdirectory)
+    - name: url
+      value: $(params.repo-url)
+    - name: revision
+      value: $(params.gitrevision-tag)
+  - name: misc
+    runAfter: ["fetch-source"]
+    workspaces:
+    - name: source
+      workspace: shared-data
+    params:
+    - name: commit-hash
+      value: $(tasks.fetch-source.results.commit)
+    taskSpec:
+      workspaces:
+      - name: source
+      params:
+      - name: commit-hash
+      results:
+      - name: current-ts
+      - name: short-sha
+      steps:
+      - image: zshusers/zsh:4.3.15
+        script: |
+          #!/usr/bin/env zsh
+          ls -R $(workspaces.source.path)/
+      - name: print-date-unix-timestamp
+        image: bash:latest
+        script: |
+          #!/usr/bin/env bash
+          date  +"%Y%m%d-%H-%M-%S" | tr -d '\n' |  tee $(results.current-ts.path)
+      - name: shorten-commit-hash
+        image: bash:latest
+        script: |
+          #!/usr/bin/env bash
+          echo $(params.commit-hash) | cut -c -8 | tr -d '\n'|  tee $(results.short-sha.path)
+  - name: build-push
+    runAfter: ["fetch-source","misc"]
+    taskRef:
+      name: kaniko
+    workspaces:
+    - name: source
+      workspace: shared-data
+      subPath: $(params.subdirectory)
+    - name: dockerconfig
+      workspace: docker-credentials
+    params:
+    - name: IMAGE
+      value: $(params.container_image):$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)
+    - name: EXTRA_ARGS
+      value: [ "--skip-tls-verify" ]
+  finally:
+  - name: send-wechat-notification  # when expression using execution status, evaluates to false		  
+    when:
+      - input: $(tasks.status)
+        operator: in
+        values: [ "Succeeded", "Completed" ]
+    params:
+    - name: revision-name
+      value: $(params.gitrevision-tag)
+    - name: check-status
+      value: $(tasks.build-push.status)
+    taskSpec:
+      params:
+      - name: revision-name
+      - name: check-status
+      steps:
+        - name: send-notification
+          image: curlimages/curl
+          script: |
+            #!/usr/bin/env sh
+              if [[ "$(params.check-status)" == "Succeeded" || "$(params.check-status)" == "Completed" ]]; then
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=5fe4fe3f-3f10-4121-a61a-66bdd953bd5d' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## 中台前端镜像构建报告
+                       > 状态:<font color=\"warning\">构建成功</font>
+                       > 项目:<font color=\"comment\">中台前端</font>
+                       > 提交短哈希:<font color=\"comment\">$(tasks.misc.results.short-sha)</font>
+                       > 分支:<font color=\"comment\">$(params.revision-name)</font>
+                       > 镜像标签:<font color=\"comment\">$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)</font>
+                       > 项目地址: [Here]($(params.repo-url)) "
+                    }
+                  }'
+              else
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=5fe4fe3f-3f10-4121-a61a-66bdd953bd5d' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## 中台前端镜像构建报告
+                       > 状态:<font color=\"warning\">构建失败</font>
+                       > 项目:<font color=\"comment\">中台前端</font>
+                       > 分支:<font color=\"comment\">$(params.revision-name)</font>
+                       > 提交短哈希:<font color=\"comment\">$(tasks.misc.results.short-sha)</font>
+                       > 镜像标签:<font color=\"comment\">$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)</font>
+                       > 项目地址: [Here]($(params.repo-url)) "
+                    }
+                  }'
+                echo $(params.check-status)
+              fi

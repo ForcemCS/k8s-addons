@@ -1,0 +1,9 @@
+type: COS
+config:
+  bucket: "thanos-prom1-1320361284"
+  region: "ap-shanghai"
+  app_id: "1320361284"
+  endpoint: "https://thanos-promxxxxxxxxxxxxxxxxxx"
+  secret_key: "AKd0AHOPRvXKhOxxxxxxxxxxxxxx"
+  secret_id: "AKIDdFvWTMC2xy4xxxxxxxxxxxxxxxxxx"
+prefix: "thanos-prom1"

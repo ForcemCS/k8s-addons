@@ -9,7 +9,7 @@
 在 Prometheus 中维护长久的数据是可行的，但并不容易。调整数据大小、备份或长期维护这些数据是很棘手的。最重要的是，Prometheus 不执行任何复制，因此 Prometheus 的任何不可用都会导致查询不可用。我们可以允许 Thanos Sidecar 持续上传由 Prometheus 定期保存到磁盘的指标块。
 注意：Prometheus 在抓取数据时，最初会聚合内存和 WAL（on-disk write-head-log）中的所有样本。仅在 2-3 小时后，它才会以 2 小时 TSDB 块的形式将数据“压缩”到磁盘中。这就是为什么我们仍然需要查询 Prometheus 来获取最新数据，但总的来说，通过此更改，我们可以将 Prometheus 保留率保持在最低限度。在这种情况下，建议将 Prometheus 保留时间至少为 6 小时，以便为潜在的网络分区事件提供安全缓冲。
 
-##Thanos组件
+## Thanos组件
 所有的组件都是通过thanos镜像实现的，只是不同的参数实现不同的功能
 
 1.Store Gateway

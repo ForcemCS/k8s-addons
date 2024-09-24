@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: roh5-push-image
+  namespace: ci
+spec:
+  description: |
+    此流水线只适用于ROH5server游戏服（或者说是适用三个仓库共同构建镜像的项目）    
+  params:
+  - name: container_image
+  workspaces:
+  - name: shared-data
+  - name: docker-credentials
+  tasks:
+  - name: misc
+    workspaces:
+    - name: source
+      workspace: shared-data
+    taskSpec:
+      workspaces:
+      - name: source
+      results:
+      - name: current-ts
+      steps:
+      - image: zshusers/zsh:4.3.15
+        script: |
+          #!/usr/bin/env zsh
+          ls -R $(workspaces.source.path)/
+      - name: print-date-unix-timestamp
+        image: bash:latest
+        env:
+          - name: TZ
+            value: "Asia/Shanghai"
+        script: |
+          #!/usr/bin/env bash
+          date  +"%Y%m%d-%H-%M-%S" | tr -d '\n' |  tee $(results.current-ts.path)
+  - name: build-push
+    runAfter:
+    - misc
+    taskRef:
+      name: kaniko
+    workspaces:
+    - name: source
+      workspace: shared-data
+      subPath: $(params.subdirectory)
+    - name: dockerconfig
+      workspace: docker-credentials
+    params:
+    - name: IMAGE
+      value: $(params.container_image):$(tasks.misc.results.current-ts)
+    - name: EXTRA_ARGS
+      value: ["--cache=true","--insecure","--skip-tls-verify","--build-arg","server=refs/tags/v12.12.23","--build-arg","config=refs/tags/v12.12.23","--build-arg","protobuf=refs/tags/v12.12.23"]

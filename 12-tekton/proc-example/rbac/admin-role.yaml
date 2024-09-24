@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/ssh-auth
+metadata:
+  name: git-credentials
+  namespace: ci
+  annotations:
+    tekton.dev/git-0: "http://gitlab.x.xinghuihuyu.cn:30020"
+type: kubernetes.io/basic-auth
+stringData:
+  username: root
+  password: basic123
+  #有关更安全的方式请自行参考官方项目演示
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: ci
+  name: tekton-triggers-example-sa
+secrets:
+  - name: git-credentials
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: ci
+  name: triggers-example-eventlistener-binding
+subjects:
+- kind: ServiceAccount
+  name: tekton-triggers-example-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-roles
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: triggers-example-eventlistener-clusterbinding
+subjects:
+- kind: ServiceAccount
+  name: tekton-triggers-example-sa
+  namespace: ci
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-clusterroles
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: triggers-example-helm
+  namespace: ci
+subjects:
+- kind: ServiceAccount
+  name: tekton-triggers-example-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton-helm-sa
+  namespace: ci
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tekton-helm-sa-binding
+  namespace: ci
+subjects:
+- kind: ServiceAccount
+  name: tekton-helm-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+

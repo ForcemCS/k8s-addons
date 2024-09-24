@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: docker
+  namespace: ci
+spec:
+  serviceAccountName: tekton-triggers-example-sa
+  params:
+  - name: image
+    value: roh5server
+  - name: insecure-registry1
+    value: lb-etkxh0j3-azlwq5ic9dpkotm4.clb.ap-shanghai.tencentclb.com:5000
+  - name: insecure-registry2
+    value: registry.ro3.xyz
+  taskRef:
+    name: docker-build
+  workspaces:
+  - name: source
+    persistentVolumeClaim:
+      claimName: dockerfile-pvc

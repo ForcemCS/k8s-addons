@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: git-clone-test
+  namespace: ci
+spec:
+  description: |
+    This pipeline clones a git repo, builds a Docker image with Kaniko and
+    pushes it to a registry
+  params:
+  - name: repo-url
+    type: string
+    description: GitLab的项目地址
+  - name: subdirectory
+    type: string
+  - name: gitrevision-tag
+    type: string
+    description: 项目分支名称
+  workspaces:
+  - name: shared-data
+  - name: gitlab-credentials
+    description: My ssh credentials
+  tasks:
+  - name: fetch-source
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: ssh-directory
+      workspace: gitlab-credentials
+    params:
+    - name: subdirectory
+      value: $(params.subdirectory)
+    - name: url
+      value: $(params.repo-url)
+    - name: revision
+      value: $(params.gitrevision-tag)

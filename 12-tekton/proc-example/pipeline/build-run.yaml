@@ -1,0 +1,31 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: push-image-
+  namespace: ci
+spec:
+  pipelineRef:
+    name: roh5-push-image
+  #taskRunSpecs:
+  #- pipelineTaskName: helm-install-middle
+  #  serviceAccountName: tekton-helm-sa
+  taskRunTemplate:
+    serviceAccountName: tekton-triggers-example-sa
+    podTemplate:
+      securityContext:
+        fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    persistentVolumeClaim:
+      claimName: ci-data-pvc
+  - name: docker-credentials
+    secret:
+      secretName: registry-secret
+      items:
+        - key: .dockerconfigjson
+          path: config.json
+  params:
+  - name: subdirectory
+    value: dockerfile
+  - name: container_image
+    value: 'registry.ro3.xyz/roh5server'

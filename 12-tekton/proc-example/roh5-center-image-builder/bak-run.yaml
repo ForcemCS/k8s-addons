@@ -1,0 +1,103 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: Trigger
+metadata:
+  name: roh5server-listener-trigger
+  namespace: ci
+spec:
+  interceptors:
+    - name: "verify-gitlab-payload"
+      ref:
+        name: "gitlab"
+        kind: ClusterInterceptor
+      params:
+        - name: secretRef
+          value:
+            secretName: "gitlab-secret"
+            secretKey: "secretToken"
+        - name: eventTypes
+          value:
+            - "Push Hook"
+            - "Tag Push Hook"
+    - name: "ro3inter-modify"
+      ref:
+        name: "ro3inter"
+        kind: NamespacedInterceptor
+    - name: "CEL filter: only when PRs are opened"
+      ref:
+        name: "cel"
+      params:
+        - name: "overlays"
+          value:
+            - key: branch_tag
+              expression: "body.ref.split('/')[2]" #Here we are splitting the body.ref as it gives output "ref/head/<branch name or tag>" with "/" to grep only branch name.
+  bindings:
+    - ref: roh5server-binding
+  template:
+    ref: roh5server-trigger-template
+---
+# Trigger Binding
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: roh5server-binding
+  namespace: ci
+spec:
+  params:
+    - name: gitrevision-tag
+      value: $(extensions.branch_tag)
+---
+# Trigger Template
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: roh5server-trigger-template
+  namespace: ci
+spec:
+  params:
+    - name: gitrevision-tag
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: roh5-push-image-
+      spec:
+        pipelineRef:
+          name: roh5-push-image
+        #taskRunSpecs:
+        #- pipelineTaskName: helm-install-middle
+        #  serviceAccountName: tekton-helm-sa
+        taskRunTemplate:
+          serviceAccountName: tekton-triggers-example-sa
+          podTemplate:
+            securityContext:
+              fsGroup: 65532
+        workspaces:
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: roh5-server-image-builder-pvc
+        - name: docker-credentials
+          secret:
+            secretName: registry-secret
+            items:
+              - key: .dockerconfigjson
+                path: config.json
+        - name: gitlab-credentials
+          secret:
+            secretName: git-credentials
+        params:
+        - name: repo-url-roh5server
+          value: http://gitlab.x.xinghuihuyu.cn:30020/server/roh5server.git
+        - name: repo-url-config2
+          value: http://gitlab.x.xinghuihuyu.cn:30020/server/config2.git
+        - name: repo-url-ro5hprotobuf
+          value: http://gitlab.x.xinghuihuyu.cn:30020/server/ro5hprotobuf.git 
+        - name: subdirectory-roh5server
+          value: roh5server
+        - name: subdirectory-config2
+          value: config2
+        - name: subdirectory-ro5hprotobuf
+          value: ro5hprotobuf
+        - name: container_image
+          value: registry.ro3.xyz/roh5server
+        - name: gitrevision-tag
+          value: $(tt.params.gitrevision-tag)

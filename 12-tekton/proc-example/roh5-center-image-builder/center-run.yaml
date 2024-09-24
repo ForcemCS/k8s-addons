@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: roh5center-build-push-
+  namespace: ci
+spec:
+  pipelineRef:
+    name: roh5center-push-image
+  #taskRunSpecs:
+  #- pipelineTaskName: helm-install-middle
+  #  serviceAccountName: tekton-helm-sa
+  taskRunTemplate:
+    serviceAccountName: tekton-triggers-example-sa
+    podTemplate:
+      securityContext:
+        fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    persistentVolumeClaim:
+      claimName: roh5-center-image-builder-pvc
+  - name: docker-credentials
+    secret:
+      secretName: registry-secret
+      items:
+        - key: .dockerconfigjson
+          path: config.json
+  - name: gitlab-credentials
+    secret:
+      secretName: git-credentials
+  params:
+  - name: repo-url
+    value: http://gitlab.x.xinghuihuyu.cn:30020/server/ro3_micro.git
+  - name: container_image
+    value: 'registry.ro3.xyz/roh5center'
+  - name: gitrevision-tag
+    value: master
+  - name: subdirectory
+    value: ""

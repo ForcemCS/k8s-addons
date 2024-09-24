@@ -1,0 +1,40 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: push-image-
+  namespace: ci
+spec:
+  pipelineRef:
+    name: push-image
+  #taskRunSpecs:
+  #- pipelineTaskName: helm-install-middle
+  #  serviceAccountName: tekton-helm-sa
+  taskRunTemplate:
+    serviceAccountName: tekton-triggers-example-sa
+    podTemplate:
+      securityContext:
+        fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    persistentVolumeClaim:
+      claimName: ci-data-pvc
+  - name: docker-credentials
+    secret:
+      secretName: registry-secret
+      items:
+        - key: .dockerconfigjson
+          path: config.json
+  - name: gitlab-credentials
+    secret:
+      secretName: git-credentials
+  params:
+  - name: repo-url
+    value: http://gitlab.x.xinghuihuyu.cn:30020/client/qhyj_middle_proj.git
+  - name: subdirectory
+    value: qhyj_middle_proj
+  - name: container_image
+    value: 'lb-etkxh0j3-azlwq5ic9dpkotm4.clb.ap-shanghai.tencentclb.com:5000/middle'
+  - name: gitrevision-tag
+    value: master
+  - name: overwrite_values
+    value: "namespace=default,image.repo=lb-etkxh0j3-azlwq5ic9dpkotm4.clb.ap-shanghai.tencentclb.com:5000/middle,image.tag=v10" 

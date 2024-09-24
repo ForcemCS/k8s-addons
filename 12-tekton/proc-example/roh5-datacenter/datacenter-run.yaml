@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: roh5datacenter-build-push-
+  namespace: ci
+spec:
+  pipelineRef:
+    name: roh5datacenter-push-image
+  #taskRunSpecs:
+  #- pipelineTaskName: helm-install-middle
+  #  serviceAccountName: tekton-helm-sa
+  taskRunTemplate:
+    serviceAccountName: tekton-triggers-example-sa
+    podTemplate:
+      securityContext:
+        fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    persistentVolumeClaim:
+      claimName: roh5-datacenter-middle-pvc
+  - name: docker-credentials
+    secret:
+      secretName: registry-secret
+      items:
+        - key: .dockerconfigjson
+          path: config.json
+  - name: gitlab-credentials
+    secret:
+      secretName: git-credentials
+  params:
+  - name: repo-url
+    value: http://xxxxxxxxxxxxxxxxxx_@gitlab.x.xinghuihuyu.cn:30020/server/datacenter.git
+  - name: container_image
+    value: 'regixxxxxxxxx/datacenter'
+  - name: gitrevision-tag
+    value: master
+  - name: subdirectory
+    value: "datacenter"

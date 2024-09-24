@@ -1,0 +1,35 @@
+apiVersion: tekton.dev/v1
+kind: Task  
+metadata:  
+  name: my-k8s-job-task
+  namespace: ci
+spec:  
+  steps:  
+    - name: run-k8s-job  
+      image: bitnami/kubectl:latest  # Använd en lämplig bild  
+      script: |  
+        #!/bin/sh  
+        set -e  
+        kubectl -n ci get   pods 
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline  
+metadata:  
+  name: my-pipeline
+  namespace: ci
+spec:  
+  tasks:  
+    - name: create-k8s-job  
+      taskRef:  
+        name: my-k8s-job-task
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun  
+metadata:  
+  name: my-pipeline-run
+  namespace: ci
+spec: 
+  taskRunTemplate:
+    serviceAccountName: tekton-triggers-example-sa
+  pipelineRef:  
+    name: my-pipeline

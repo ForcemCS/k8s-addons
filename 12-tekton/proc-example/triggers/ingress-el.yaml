@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/instance: triggers-ingress-resource
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  name: triggers-ingress-resource
+  namespace: ci
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: el.hdh5.local.h.xinghuihuyu.cn
+    http:
+      paths:
+      - backend:
+          service:
+            name: el-gitlab-event-listener
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: insecure-secret
+  namespace: ci
+data:
+  .dockerconfigjson: eyAgICJpbnNlY3VyZS1yZWdpc3RyaWVzIiA6IFsibGItZXRreGgwajMtYXpsd3E1aWM5ZHBrb3RtNC5jbGIuYXAtc2hhbmdoYWkudGVuY2VudGNsYi5jb206NTAwMCIsImhhcmJvci50aHJlc2hvbGQuY29tOjMxMzM5Il0gfQo=
+type: kubernetes.io/dockerconfigjson

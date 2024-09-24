@@ -1,0 +1,27 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: git-clone-test-
+  namespace: ci
+spec:
+  pipelineRef:
+    name: git-clone-test
+  taskRunTemplate:
+    serviceAccountName: tekton-triggers-example-sa
+    podTemplate:
+      securityContext:
+        fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    persistentVolumeClaim:
+      claimName: ci-data-pvc
+  - name: gitlab-credentials
+    secret:
+      secretName: git-credentials
+  params:
+  - name: repo-url
+    value: http://gitlab.x.xinghuihuyu.cn:30020/server/config2.git
+  - name: subdirectory
+    value: config2
+  - name: gitrevision-tag
+    value: cn_1.1.20

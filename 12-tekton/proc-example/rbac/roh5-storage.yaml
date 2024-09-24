@@ -1,0 +1,85 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: ci-data
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: roh5-server-image-builder-pv
+spec:
+  capacity:
+    storage: 2Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: ci-data
+  local:
+    path: /root/tekton/ci-data/roh5-server-image-builder
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - debian
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: roh5-server-image-builder-pvc
+  namespace: ci
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: ci-data
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: ci-data-1
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: roh5-center-image-builder-pv
+spec:
+  capacity:
+    storage: 2Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: ci-data-1
+  local:
+    path: /root/tekton/ci-data/roh5-center-image-builder
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - debian
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: roh5-center-image-builder-pvc
+  namespace: ci
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: ci-data-1

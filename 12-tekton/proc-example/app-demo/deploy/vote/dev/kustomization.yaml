@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../base
+patches:
+- path: deployment.yaml
+  target:
+    kind: Deployment
+    name: vote
+replicas:
+- name: vote
+  count: 1
+images:
+- name: harbor.forcecs.com:32415/vote/vote:main-31357ded-1699343111 # {"$imagepolicy": "flux-system:vote"}
+  newTag: main-646fa717-1699328554
+namespace: instavote
+configMapGenerator:
+- name: vote-options
+  envs:
+  - options.env

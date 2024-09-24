@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: vote
+    tier: front
+  name: vote
+spec:
+  replicas: 4
+  template:
+    spec:
+      containers:
+      - image: schoolofdevops/vote:v3
+        name: vote

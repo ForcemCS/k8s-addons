@@ -1,0 +1,8 @@
+type: S3
+prefix: k3s-standard
+config:
+  endpoint: "roh5minio-hl.minio-roh5.svc.cluster.local:9000"
+  bucket: "thanos"
+  insecure: true
+  access_key: "T6EHBSK5lhsgjsLbz1O4"
+  secret_key: "EYowmXKaCcgZf8NJywnLP983D5rjTK5lCyNww876"

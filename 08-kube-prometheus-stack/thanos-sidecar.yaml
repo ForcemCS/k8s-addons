@@ -1,0 +1,169 @@
+alertmanager:
+  config:
+    global:
+      resolve_timeout: 2m
+  alertmanagerSpec:
+    alertmanagerConfigMatcherStrategy:
+      type: None
+  templateFiles:
+    wechat.tmpl: |-
+        {{ define "wechat.default.message" }}
+        {{- if gt (len .Alerts.Firing) 0 -}}
+        {{- range $index, $alert := .Alerts -}}
+        {{- if eq $index 0 }}
+        ========= 监控报警 =========
+        告警状态：{{   .Status }}
+        告警级别：{{ .Labels.severity }}
+        告警类型：{{ $alert.Labels.alertname }}
+        故障主机: {{ $alert.Labels.instance }}
+        告警主题: {{ $alert.Annotations.summary }}
+        告警详情: {{ $alert.Annotations.message }}{{ $alert.Annotations.description}};
+        触发阀值：{{ .Annotations.value }}
+        故障时间: {{ ($alert.StartsAt.Add 28800e9).Format "2006-01-02 15:04:05" }}
+        ========= = end =  =========
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if gt (len .Alerts.Resolved) 0 -}}
+        {{- range $index, $alert := .Alerts -}}
+        {{- if eq $index 0 }}
+        ========= 异常恢复 =========
+        告警类型：{{ .Labels.alertname }}
+        告警状态：{{   .Status }}
+        告警主题: {{ $alert.Annotations.summary }}
+        告警详情: {{ $alert.Annotations.message }}{{ $alert.Annotations.description}};
+        故障时间: {{ ($alert.StartsAt.Add 28800e9).Format "2006-01-02 15:04:05" }}
+        恢复时间: {{ ($alert.EndsAt.Add 28800e9).Format "2006-01-02 15:04:05" }}
+        {{- if gt (len $alert.Labels.instance) 0 }}
+        实例信息: {{ $alert.Labels.instance }}
+        {{- end }}
+        ========= = end =  =========
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+    - alert.threshold.com
+    paths:
+    - /
+    tls:
+    - secretName: alert-threshold-com
+      hosts:
+      - alert.threshold.com
+#--------
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+#--------
+prometheus:
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    hosts:
+    - prom.threshold.com
+    tls:
+    - hosts:
+      - prom.threshold.com
+      secretName: prom-threshold-com
+  prometheusSpec:
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    additionalArgs:
+    #模板生成的为10天
+    #- name: 'storage.tsdb.retention.time=15d'
+    - name: 'storage.tsdb.max-block-duration=2h'
+    - name: 'storage.tsdb.min-block-duration=2h'
+      #启用管理员API
+    - name: 'web.enable-admin-api'
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+                - key: preferred
+                  operator: In
+                  values:
+                    - prometheus
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-prom-stack
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 8Gi  
+    externalLabels:
+      cluster: prod
+      #在HA 模式下对于指标的去重尤为重要
+      replica: "0"
+      #以便日后实现多租户的功能
+      __tenant_id__ : tenant-txcloud
+    thanos:
+      image: "quay.io/thanos/thanos:v0.35.1"
+      objectStorageConfig: 
+        key: thanos.yaml
+        name: thanos-cos-config
+      version: v0.35.1
+      additionalArgs:
+      - name: 'shipper.upload-compacted'
+      - name: 'tsdb.path=/prometheus/prometheus-db'
+      - name: 'objstore.config'
+        value: |
+          type: COS
+          config:
+            bucket: "thanos-prom1-1320361284"
+            region: "ap-shanghai"
+            app_id: "1320361284"
+            endpoint: "端点地址"
+            secret_key: "xxxx"
+            secret_id: "xxxx"
+          prefix: "thanos-prom1"
+
+      volumeMounts:
+      - name: prometheus-prometheus-stack-kube-prom-prometheus-db
+        mountPath: /prometheus
+
+  thanosService:
+    enabled: true
+##-----
+grafana:
+  persistence:
+    enabled: true
+    storageClassName: local-prom-stack
+    accessModes: ["ReadWriteOnce"]
+    size: 3Gi
+
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+              - key: preferred
+                operator: In
+                values:
+                  - grafana
+
+  adminPassword: basic123@
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    hosts:
+    - grafana.threshold.com
+    path: /
+    tls:
+    - hosts:
+      - grafana.threshold.com
+      secretName: grafana-threshold-com

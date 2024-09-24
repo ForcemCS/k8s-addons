@@ -1,0 +1,9 @@
+type: COS
+config:
+  bucket: "具体的存储同"
+  region: "地区"
+  app_id: "xxx"
+  endpoint: "COS端点地址"
+  secret_key: "xx1"
+  secret_id: "xx2"
+prefix: "thanos-prom1"

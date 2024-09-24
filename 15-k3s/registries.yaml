@@ -1,0 +1,17 @@
+mirrors:
+  "lb-etkxh0j3-azxxxxxxxxxxxxxxxxx:5000":
+    endpoint:
+      - "lb-etkxh0j3-xxxxxxxxxxxxxxxxxxxxxx:5000"
+  "registry.xxx"
+    endpoint:
+      - "registry.xxxxx"
+configs:
+  "registry.xxxx":
+    tls:
+      insecure_skip_verify: true
+  "lb-xxxxxxxxxxxxxxxx.clb.ap-shanghai.tencentclb.com:5000":
+    tls:
+      insecure_skip_verify: true
+    auth:
+      username: xxxxxxxx
+      password: xxxxxxxx

@@ -149,3 +149,26 @@ secret 现在是群集的一部分，当应用程序需要时，控制器将对�
 7. 应用程序照常运行。
 
 通过使用 Sealed Secrets 控制器，我们最终可以在 Git 中（以加密形式）存储所有机密，并与应用程序配置一起存储。
+
+## Declarative 配置
+
+```
+argocd app create demo \
+--project default \
+--repo https://github.com/ForcemCS/gitops-certification-examples.git \
+--path "./helm-app/" \
+--sync-policy auto \
+--dest-namespace default \
+--dest-server https://kubernetes.default.svc
+```
+
+```
+argocd app create demo \
+--project default \
+--repo https://github.com/ForcemCS/gitops-certification-examples.git \
+--path ./kustomize-app/overlays/staging \
+--sync-policy auto \
+--dest-namespace default \
+--dest-server https://kubernetes.default.svc
+```
+

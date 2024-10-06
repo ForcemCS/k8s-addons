@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: webhook
+spec:
+  template:
+    serviceAccountName: operate-workflow-sa
+  dependencies:
+    - name: test-dep
+      eventSourceName: webhook
+      eventName: example
+  triggers:
+    - template:
+        name: webhook-workflow-trigger
+        argoWorkflow:
+          operation: submit
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: webhook-
+              spec:
+                entrypoint: whalesay
+                arguments:
+                  parameters:
+                    - name: message
+                      # the value will get prepended by event payload from test-dep
+                      value: hello world
+                templates:
+                  - name: whalesay
+                    inputs:
+                      parameters:
+                        - name: message
+                    container:
+                      image: docker/whalesay:latest
+                      command: [cowsay]
+                      args: ["{{inputs.parameters.message}}"]
+          parameters:
+            - src:
+                dependencyName: THIS_WILL_BE_REPLACED
+                dataKey: THIS_WILL_BE_REPLACED
+              dest: THIS_WILL_BE_REPLACED
+      parameters:
+        - src:
+            dependencyName: test-dep
+            dataKey: body.dependencyName
+          dest: k8s.parameters.0.src.dependencyName
+        - src:
+            dependencyName: test-dep
+            dataKey: body.dataKey
+          dest: k8s.parameters.0.src.dataKey
+        - src:
+            dependencyName: test-dep
+            dataKey: body.dest
+          dest: k8s.parameters.0.dest

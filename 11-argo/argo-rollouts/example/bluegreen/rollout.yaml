@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: rollout-bluegreen
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: rollout-bluegreen
+  template:
+    metadata:
+      labels:
+        app: rollout-bluegreen
+    spec:
+      containers:
+      - name: rollouts-demo
+        image: argoproj/rollouts-demo:blue
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+  strategy:
+    blueGreen: 
+      # 指定了生产环境中正在使用的 Service 的名称,是一个必填字段
+      # 当新版本（Green）准备好后，Rollouts 会将这个 activeService 的 selector 更新到新版本的 Pod 上，从而将流量切换到新版本。简单来说，activeService 指向的是用户实际访问的服务
+      activeService: rollout-bluegreen-active
+      # 这是一个可选字段。它指定了一个预发布环境的 Service 的名称。在新版本（Green）部署出来之后，但在晋级到生产环境之前，Rollouts 会将 previewService 的 selector 指向新版本的 Pod
+      # 这允许你在将新版本暴露给生产流量之前，先在预发布环境中进行测试和验证。
+      # 如果你没有配置 previewService，则新版本在晋级之前是无法直接访问的。
+      previewService: rollout-bluegreen-preview
+      # 这是一个可选字段，用于控制是否自动晋级。这种方式可以让你在晋级之前进行更充分的测试和验证。
+      # 如果设置为 false，则在新的 ReplicaSet 完全准备好之后，Rollouts 不会自动将流量切换到新版本。它会暂停 rollout 的流程，等待你手动执行晋级操作
+      # 如果设置为 true 或者省略该字段（默认行为），则 Rollouts 会在新的 ReplicaSet 完全准备好之后自动将流量切换到新版本。
+      autoPromotionEnabled: false

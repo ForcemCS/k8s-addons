@@ -1,2 +1,0 @@
-helm    -n  argo-events   upgrade --install    argo-events argo/argo-events  --version 2.4.7
-

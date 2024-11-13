@@ -1,0 +1,104 @@
+commonLabels:
+  prom_id: promxxxxxxxxx  # 通过这个 label 指定 Prometheus 实例的 ID，以便被 Prometheus 实例识别到 ServiceMonitor
+controller: # 以下配置将依赖镜像替换为了 docker hub 上的 mirror 镜像以保证在国内环境能正常拉取
+  image:
+    registry: docker.io
+    image: k8smirror/ingress-nginx-controller
+  admissionWebhooks:
+    patch:
+      image:
+        registry: docker.io
+        image: k8smirror/ingress-nginx-kube-webhook-certgen
+  defaultBackend:
+    image:
+      registry: docker.io
+      image: k8smirror/defaultbackend-amd64
+  opentelemetry:
+    image:
+      registry: docker.io
+      image: k8smirror/ingress-nginx-opentelemetry
+  replicaCount: 2
+  topologySpreadConstraints: # 尽量打散的策略
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: '{{ include "ingress-nginx.name" . }}'
+          app.kubernetes.io/instance: "{{ .Release.Name }}"
+          app.kubernetes.io/component: controller
+      topologyKey: topology.kubernetes.io/zone
+      maxSkew: 1
+      whenUnsatisfiable: ScheduleAnyway
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: '{{ include "ingress-nginx.name" . }}'
+          app.kubernetes.io/instance: "{{ .Release.Name }}"
+          app.kubernetes.io/component: controller
+      topologyKey: kubernetes.io/hostname
+      maxSkew: 1
+      whenUnsatisfiable: ScheduleAnyway
+  service:
+    enabled: true
+    external:
+      enabled: true
+    annotations:
+      service.kubernetes.io/tke-existed-lbid: 'lb-xxxxxxxxxxx' # 指定已有 CLB 的实例 ID
+      service.cloud.tencent.com/direct-access: "true" # 启用 CLB 直通
+    type: LoadBalancer
+  metrics:
+    enabled: true # 专门创建一个 service 给 Prometheus 用作 Nginx Ingress 的服务发现
+    serviceMonitor:
+      enabled: true # 下发 ServiceMonitor 自定义资源，启用监控采集规则
+  #调优内核参数
+  extraInitContainers:
+    - name: sysctl
+      image: busybox
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        privileged: true
+      command:
+        - sh
+        - -c
+        - |
+          sysctl -w net.core.somaxconn=65535 # 调大链接队列，防止队列溢出
+          sysctl -w net.ipv4.ip_local_port_range="1024 65535" # 扩大源端口范围，防止端口耗尽
+          sysctl -w net.ipv4.tcp_tw_reuse=1 # TIME_WAIT 复用，避免端口耗尽后无法新建连接
+          sysctl -w fs.file-max=1048576 # 调大文件句柄数，防止连接过多导致文件句柄耗尽
+  config:
+    # nginx 与 client 保持的一个长连接能处理的请求数量，默认100，高并发场景建议调高，但过高也可能导致 nginx ingress 扩容后负载不均。
+    # 参考: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#keep-alive-requests
+    keep-alive-requests: "1000"
+    # nginx 与 upstream 保持长连接的最大空闲连接数 (不是最大连接数)，默认 320，在高并发下场景下调大，避免频繁建联导致 TIME_WAIT 飙升。
+    # 参考: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#upstream-keepalive-connections
+    upstream-keepalive-connections: "2000"
+    # 每个 worker 进程可以打开的最大连接数，默认 16384。
+    # 参考: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#max-worker-connections
+    max-worker-connections: "65536"
+    # nginx 日志落盘到日志文件，避免高并发下占用过多 CPU
+    access-log-path: /var/log/nginx/nginx_access.log
+    error-log-path: /var/log/nginx/nginx_error.log
+  extraEnvs:
+    - name: TZ
+      value: Asia/Shanghai
+  extraVolumes:
+    - name: log # controller 挂载日志目录
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: log # logratote 与 controller 共享日志目录
+      mountPath: /var/log/nginx
+  extraContainers: # logrotate sidecar 容器，用于轮转日志
+    - name: logrotate
+      image: imroc/logrotate:latest # https://github.com/imroc/docker-logrotate
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: LOGROTATE_FILE_PATTERN # 轮转的日志文件 pattern，与 nginx 配置的日志文件路径相匹配
+          value: "/var/log/nginx/nginx_*.log"
+        - name: LOGROTATE_FILESIZE # 日志文件超过多大后轮转
+          value: "100M"
+        - name: LOGROTATE_FILENUM # 每个日志文件轮转的数量
+          value: "3"
+        - name: CRON_EXPR # logrotate 周期性运行的 crontab 表达式，这里每分钟一次
+          value: "*/1 * * * *"
+        - name: CROND_LOGLEVEL # crond 日志级别，0~8，越小越详细
+          value: "8"
+      volumeMounts:
+        - name: log
+          mountPath: /var/log/nginx

@@ -1,0 +1,3 @@
+helm -n  monitoring  upgrade --install grafana grafana/grafana \
+  --version 8.5.8  \
+  -f values.yaml

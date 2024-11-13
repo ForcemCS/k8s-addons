@@ -1,0 +1,30 @@
+persistence:
+  type: pvc
+  enabled: true
+  storageClassName: cbs-yield
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+  existingClaim: grafana   #tke事先创建好的pvc
+ingress:
+  enabled: true
+  ingressClassName: monitoring-nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+  path: /
+  pathType: Prefix
+  hosts:
+    - xxxx
+  tls:
+  - secretName: monitoring-ingress-secret
+    hosts:
+      - xxxxx
+resources:
+  limits:
+    cpu: 300m
+    memory: 500Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

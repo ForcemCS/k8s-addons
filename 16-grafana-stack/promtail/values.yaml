@@ -1,0 +1,31 @@
+extraVolumes:
+  - name: node-logs
+    hostPath:
+      path: /var/local
+extraVolumeMounts:
+  - name: node-logs
+    mountPath: /var/local 
+config:
+  clients:
+    - url: http://loki-gateway/loki/api/v1/push
+      basic_auth:
+        username: xxxxxx
+        password: xxxxxxxx
+  snippets:
+    pipelineStages:
+      - cri: {}
+    extraScrapeConfigs: |
+      - job_name: 10001-info
+        static_configs:
+        - targets:
+          - localhost
+          labels:
+            job: xxx-info
+            __path__: /var/local/game-log-10001/info/*.log
+      - job_name: 10001-error
+        static_configs:
+        - targets:
+          - localhost
+          labels:
+            job: xx-error
+            __path__: /var/local/game-log-10001/error/*.log

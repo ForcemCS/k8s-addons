@@ -1,0 +1,1 @@
+helm -n  monitoring  upgrade --install loki loki-6.18.0.tgz -f values.yaml

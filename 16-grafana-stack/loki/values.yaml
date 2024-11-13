@@ -1,0 +1,94 @@
+loki:
+  auth_enabled: false
+  schemaConfig:
+    configs:
+      - from: "2024-10-30"
+        store: tsdb
+        object_store: s3
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  ingester:
+    chunk_encoding: snappy
+  tracing:
+    enabled: true
+  querier:
+    # 默认为 4，如果内存和 CPU 足够，可以增加，如果出现 OOM，可以减少
+    max_concurrent: 4
+  query_range: 
+    align_queries_with_step: true
+  storage:
+    bucketNames:
+      #主存储桶，一般可以只配置这一个
+      chunks: xx
+      #用于存储警报规则和相关数据
+      ruler: xx
+      #执行各种管理任务
+      admin: xx
+    type: s3
+    s3:
+      endpoint: cos.ap-shanghai.myqcloud.com
+      accessKeyId: xxxx
+      secretAccessKey: xxxx
+      region: ap-shanghai
+deploymentMode: SimpleScalable
+backend:
+  replicas: 2
+read:
+  replicas: 2
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 50m
+      memory: 100Mi
+write:
+  replicas: 2
+# 默认情况下，该图表会部署一个 Nginx 容器作为网关，处理流量路由
+# 使用 HTTP 基本身份验证限制对Loki访问
+# 但是我们也可以置为false,使用K8S集群的ingress
+gateway:
+  enabled: true
+  ingress:
+    enabled: true
+    ingressClassName: "monitoring-nginx"
+    annotations: {}
+    hosts:
+      - host: xxxxxxxxxxxx
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: monitoring-ingress-secret
+        hosts:
+          - xxxxxxxxxxx
+  basicAuth:
+    enabled: true
+    # -- The basic auth username for the gateway
+    username: xxxxxxxx
+    # -- The basic auth password for the gateway
+    password: xxxxxxxxx
+#---------------------------------
+# 其他部署模式
+singleBinary:
+  replicas: 0
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomCompactor:
+  replicas: 0
+bloomGateway:
+  replicas: 0

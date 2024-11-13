@@ -1,0 +1,1 @@
+helm -n  monitoring  upgrade --install promtail  promtail-6.16.6.tgz

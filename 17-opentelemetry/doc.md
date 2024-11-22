@@ -346,6 +346,65 @@ Instrumentation libraries 为增强缺乏 OpenTelemetry 原生支持的第三方
    - **Histogram (直方图):** 用于记录数值的分布情况，例如请求延迟的分布、文件大小的分布等，将数据划分到不同的桶中进行统计。
 3. **Measurement (测量值):** 是 instrument 记录的单个数据点，代表指标在特定时刻的状态。例如，一个计数器每次增加1就是一个 measurement。这些原始的 measurement 会被聚合处理成最终的数据点。
 
+## Logs
+
+请参考如下资源
+
+- [OpenTelemetry logs](https://opentelemetry.io/docs/concepts/signals/logs/)
+- [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs/)
+- [Logs Data Model | OpenTelemetry](https://opentelemetry.io/docs/specs/otel/logs/data-model/)
+- [Getting Started | OpenTelemetry](https://opentelemetry.io/docs/languages/python/getting-started/)
+- [OpenTelemetry Python API and SDK](https://github.com/open-telemetry/opentelemetry-python)
+- [OpenTelemetry Logging Instrumentation](https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/logging/logging.html)
+
+## OpenTelemetry Collector
+
+<img src="./img/9.png" alt="8" style="zoom:50%;" />
+
+接下我们将了解
+
+- 了解 OpenTelemetry Collector 在遥测管道中的作用
+- 区分基于 SDK 的遥测和基于采集器的遥测管道。
+- 解释采集器管道的组成部分，包括接收器、处理器和输出器
+- 描述各种采集器部署模式，以及采集器如何改进资源管理和遥测性能
+- 确定使用采集器进行遥测治理、扩展和故障排除的好处
+- 使用基于 YAML 的配置文件配置 OpenTelemetry 收集器
+- 评估不同采集器部署拓扑结构的利弊
+
+我们了解了 OpenTelemetry 的 SDK 如何实现产生遥测数据的仪器。我们还配置了一个基本管道，直接从 SDK 导出生成的遥测数据。[*Collector*](https://opentelemetry.io/docs/collector/) 是 OpenTelemetry 的关键组件，用于管理遥测数据的处理和转发。
+
+现在，你可能会问自己：这些功能与 SDK 有什么不同？
+
+使用 SDK 时，遥测管道是在应用程序代码中定义的。根据您的使用情况，这种方法完全没问题。另一方面，收集器是一个用 Go 编写的二进制文件，作为一个单独的独立进程运行。它提供了一个灵活、可配置且与供应商无关的系统，用于处理应用程序之外的遥测。它本质上是遥测源和存储数据的后端之间的中介。
+
+### The Benefits of Collectors
+
+部署收集器有很多优点。最重要的是，它可以更干净地分离关注点。开发人员不必关心遥测生成后会发生什么。有了采集器，操作员就可以控制遥测配置，而无需修改应用程序代码。此外，将这些关注点整合到一个中心位置可简化维护工作。在基于 SDK 的方法中，遥测数据的去向、所需格式以及处理方式等配置分散在由不同团队管理的不同代码库中。然而，遥测管道很少是针对单个应用的。如果没有收集器，调整配置并在不同应用间保持一致就会变得非常棘手。
+
+把东西从 SDK 中移出还有其他好处。例如，SDK 的整体配置变得更加精简。此外，每次对遥测管道进行更改时，我们都不再需要重新部署应用程序。由于在调试与遥测处理相关的问题时只需监控一个位置，因此故障排除变得更加容易。将处理和转发卸载到另一个进程意味着应用程序可以将资源用于执行实际工作，而不是处理遥测。在了解更多细节之前，我们先来看看组成收集器的组件。
+
+### Architecture of a Collector Pipeline
+
+#### Receivers 
+
+<img src="./img/10.png" alt="8" style="zoom:50%;" />
+
+测信号管道由接收器、处理器和输出器组合而成。
+
+接收器是数据从源（即应用程序）到 OpenTelemetry 收集器的传输方式。这种机制可以是拉式的，也可以是推式的。开箱即用的收集器支持 [**OTLPReceiver**](https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver/otlpreceiver) 以 OpenTelemetry 的本地格式接收跟踪、度量和日志。[**collector-contrib**](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver) 资源库包括一系列接收器，用于摄取以各种协议编码的遥测数据。例如，有一个用于跟踪的 [**ZipkinReceiver**](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/zipkinreceiver) 接收器、[**StatsdReceiver**](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/statsdreceiver) 和 [**PrometheusReceiver**](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/prometheusreceiver) 等等。数据导入后，接收器会将遥测数据转换为内部表示。然后，接收器将收集到的遥测数据传递给一系列处理器。
+
+#### Processors 
+
+处理器提供一种机制，用于在将遥测数据发送到后端之前对其进行预处理。处理器分为两类，一些适用于所有信号，而另一些则专门针对特定类型的遥测数据。从广义上讲，处理遥测数据一般有以下几个原因：
+
+#### Exporters
+
+最后，链中的最后一个处理器将其输出交给输出器。输出器接收数据，将内部表示转换成所选的协议，并将其转发到一个（或多个）目的地。与接收器类似，收集器也内置了 [OTLP](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter) 的输出器。如前所述，许多开源或商业可观测性后端都是围绕自定义数据格式构建的。尽管 OpenTelemetry 越来越流行，但您当前的后端可能还不支持（或处于早期阶段）OTLP。为了解决这个问题，[**collector-contrib**](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter) 资源库包含了许多遥测协议的输出程序。
+
+### 配置OpenTelemetry Collector
+
+<img src="./img/11.png" alt="8" style="zoom:50%;" />
+
 ## 单词
 
 Instrumentation/**ˌɪnstrəmen'teɪʃn**/： 仪表装置

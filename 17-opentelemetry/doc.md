@@ -307,6 +307,45 @@ Instrumentation libraries 为增强缺乏 OpenTelemetry 原生支持的第三方
 
 认识到这些挑战，OpenTelemetry 支持增量迁移策略，以简化采用过程。仪表库和自动仪表旨在提供预定义的度量、跟踪和日志，只需最少的代码改动，从而简化集成过程。
 
+## Traces
+
+<img src="./img/8.png" alt="8" style="zoom:50%;" />
+
+**1. Tracing API (追踪 API):** 这是开发者与 OpenTelemetry 交互的主要接口。开发者使用这些接口在应用程序代码中添加追踪信息，例如创建 Span（跨度，代表一个操作单元）、添加属性等等。你可以把它理解成一套用于埋点的工具。
+
+**2. SDK (软件开发工具包):** SDK 实现了 Tracing API，并提供了更多的功能，例如配置追踪管道、管理 Span 的生命周期等。它就像一个引擎，驱动着整个追踪过程。
+
+**3. TracingProvider (追踪提供者):** 这是 SDK 的核心组件，负责创建 Tracer 对象。一个应用程序通常只有一个 TracingProvider 实例。它像一个工厂，负责生产 Tracer。
+
+**4. Tracer (追踪器):** 开发者使用 Tracer 对象来创建 Span。每个 Span 代表应用程序中的一个操作单元，例如一个函数调用、一个数据库查询等等。Tracer 就像一个记录器，记录着每个操作的执行情况。
+
+**5. Tracing Pipeline (追踪管道):** 这是 Span 数据的处理流程。它由 SpanProcessor 和 SpanExporter 组成。
+
+**6. SpanProcessor (跨度处理器):** SpanProcessor 负责处理 Span 数据，例如添加标签、过滤 Span 等等。它像一个过滤器，可以对 Span 数据进行一些预处理。
+
+**7. SpanExporter (跨度导出器):** SpanExporter 负责将 Span 数据发送到后端系统，例如 Jaeger、Zipkin 等等。它像一个发送器，将处理好的 Span 数据发送到指定的地方。
+
+**8. NoOpProvider (空操作提供者):** 这是一个默认的 TracingProvider，它不会进行任何实际的追踪操作。当开发者没有配置 TracingProvider 时，就会使用 NoOpProvider。它就像一个占位符，防止程序崩溃。
+
+**工作流程:**
+
+1. 应用程序调用 Tracing API 创建 Span。
+2. Tracing API 将请求传递给 TracingProvider。
+3. TracingProvider 创建 Tracer 对象。
+4. 应用程序使用 Tracer 对象创建 Span 并记录追踪信息。
+5. Span 数据被传递到 Tracing Pipeline。
+6. SpanProcessor 对 Span 数据进行处理。
+7. SpanExporter 将处理后的 Span 数据发送到后端系统。
+
+## Metrics
+
+1. **Meter (计量器):** 可以理解为一个“工厂”或“命名空间”，用于创建和管理各种 instruments。一个 meter 通常与你的应用中的一个库或模块关联。例如，你可以为你的网络请求模块创建一个 meter，专门用于生成和管理与网络请求相关的指标。
+2. **Instrument (仪器):** 是具体的测量工具，用于记录特定类型的指标。它由 meter 创建，并拥有一个唯一的名称。常见的 instrument 类型包括：
+   - **Counter (计数器):** 用于累计计数，例如请求总数、错误总数等，值只会递增。
+   - **Gauge (测量仪):** 用于记录瞬时值，例如当前CPU使用率、内存使用量等，值可以上升或下降。
+   - **Histogram (直方图):** 用于记录数值的分布情况，例如请求延迟的分布、文件大小的分布等，将数据划分到不同的桶中进行统计。
+3. **Measurement (测量值):** 是 instrument 记录的单个数据点，代表指标在特定时刻的状态。例如，一个计数器每次增加1就是一个 measurement。这些原始的 measurement 会被聚合处理成最终的数据点。
+
 ## 单词
 
 Instrumentation/**ˌɪnstrəmen'teɪʃn**/： 仪表装置

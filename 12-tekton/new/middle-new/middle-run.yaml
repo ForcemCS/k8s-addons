@@ -1,0 +1,42 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: middle-proj-
+  namespace: ci
+spec:
+  pipelineRef:
+    name: middle-proj
+  #taskRunSpecs:
+  #- pipelineTaskName: helm-install-middle
+  #  serviceAccountName: tekton-helm-sa
+  taskRunTemplate:
+    serviceAccountName: tekton-triggers-example-sa
+    podTemplate:
+      securityContext:
+        fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    persistentVolumeClaim:
+      claimName: roh5-datacenter-middle-pvc
+  - name: docker-credentials
+    secret:
+      secretName: registry-secret
+      items:
+        - key: .dockerconfigjson
+          path: config.json
+  - name: gitlab-credentials
+    secret:
+      secretName: git-credentials
+  params:
+  - name: repo-url-1
+    value: http://xxxxxxxxxxxxxxx:port/client/qhyj_middle_proj.git
+  - name: repo-url-2
+    value: http://xxxxxxxxxxxx:port/client/roh5.git
+  - name: container_image
+    value: 'xxxxxxxxxxxxx/middle'
+  - name: gitrevision-tag
+    value: master
+  - name: subdirectory1
+    value: "qhyj_middle_proj"
+  - name: subdirectory2
+    value: "client-roh5"

@@ -1,0 +1,214 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: middle-proj
+  namespace: ci
+spec:
+  description: |
+    This pipeline clones a git repo, builds a Docker image with Kaniko and
+    pushes it to a registry    
+  params:
+  - name: repo-url-1
+    type: string
+    description: GitLab的项目地址
+  - name: repo-url-2
+    type: string
+    description: GitLab的项目地址
+  - name: subdirectory1
+    type: string
+  - name: subdirectory2
+    type: string
+  - name: gitrevision-tag
+    type: string
+    description: 项目分支名称
+  - name: container_image
+  workspaces:
+  - name: shared-data
+  - name: docker-credentials
+  - name: gitlab-credentials
+    description: My ssh credentials
+  tasks:
+  - name: fetch-middle-proj
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: ssh-directory
+      workspace: gitlab-credentials
+    params:
+    - name: subdirectory
+      value: $(params.subdirectory1)
+    - name: url
+      value: $(params.repo-url-1)
+    - name: revision
+      value: $(params.gitrevision-tag)
+  - name: fetch-client-roh5
+    runAfter: ["fetch-middle-proj"]
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: ssh-directory
+      workspace: gitlab-credentials
+    params:
+    - name: subdirectory
+      value: $(params.subdirectory2)
+    - name: url
+      value: $(params.repo-url-2)
+    - name: revision
+      value: $(params.gitrevision-tag)
+  - name: replace-files
+    runAfter:
+    - fetch-middle-proj
+    - fetch-client-roh5
+    workspaces:
+    - name: source
+      workspace: shared-data
+    taskSpec:
+      workspaces:
+      - name: source
+      steps:
+      - name: replace-files
+        image: bash:latest
+        workingDir: $(workspaces.source.path)
+        script: |
+          #!/usr/bin/env bash
+          pwd
+          # 定义目录
+          dir1="./qhyj_middle_proj/public/config/1001"
+          dir2="./client-roh5/resource/config"
+          
+          # 遍历目录1下的所有文件
+          find "$dir1" -type f -print0 | while IFS= read -r -d $'\0' file1; do
+            # 获取文件名
+            filename=$(basename "$file1")
+          
+            # 检查目录2中是否存在同名文件
+            if [ -f "$dir2/$filename" ]; then
+              # 删除目录1中的文件
+              rm "$file1"
+              # 从目录2复制文件到目录1
+              cp "$dir2/$filename" "$dir1"
+              echo "替换 $file1 为 $dir2/$filename"
+            fi
+          done
+          
+          echo "替换完成"
+  - name: misc
+    runAfter:
+    - fetch-middle-proj
+    - fetch-client-roh5
+    workspaces:
+    - name: source
+      workspace: shared-data
+      subPath: $(params.subdirectory1)
+    params:
+    - name: commit-hash
+      value: $(tasks.fetch-middle-proj.results.commit)
+    taskSpec:
+      workspaces:
+      - name: source
+      params:
+      - name: commit-hash
+      results:
+      - name: current-ts
+      - name: short-sha
+      steps:
+      - name: replace-basic-image
+        image: zshusers/zsh:4.3.15
+        script: |
+          #!/usr/bin/env zsh
+           sed  -i 's/FROM node/FROM registry.ro3.xyz\/node/g'  $(workspaces.source.path)/Dockerfile 
+           sed  -i 's/FROM nginx/FROM registry.ro3.xyz\/nginx/g'  $(workspaces.source.path)/Dockerfile
+      - name: print-date-unix-timestamp
+        image: registry.ro3.xyz/bash:latest
+        script: |
+          #!/usr/bin/env bash
+          date  +"%Y%m%d-%H-%M-%S" | tr -d '\n' |  tee $(results.current-ts.path)
+      - name: shorten-commit-hash
+        image: bash:latest
+        script: |
+          #!/usr/bin/env bash
+          echo $(params.commit-hash) | cut -c -8 | tr -d '\n'|  tee $(results.short-sha.path)
+  - name: build-push
+    runAfter: ["misc"]
+    taskRef:
+      name: kaniko
+    workspaces:
+    - name: source
+      workspace: shared-data
+      subPath: $(params.subdirectory1)
+    - name: dockerconfig
+      workspace: docker-credentials
+    params:
+    - name: IMAGE
+      value: $(params.container_image):$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)
+    - name: EXTRA_ARGS
+      value: [ "--cache=true","--insecure","--skip-tls-verify" ]
+  finally:
+  - name: send-wechat-notification-1  # when expression using execution status, evaluates to false		  
+    when:
+      - input: $(tasks.status)
+        operator: in
+        values: [ "Succeeded", "Completed" ]
+    params:
+    - name: revision-name
+      value: $(params.gitrevision-tag)
+    - name: check-status
+      value: $(tasks.build-push.status)
+    taskSpec:
+      params:
+      - name: revision-name
+      - name: check-status
+      steps:
+        - name: send-notification
+          image: curlimages/curl
+          script: |
+            #!/usr/bin/env sh
+              if [[ "$(params.check-status)" == "Succeeded" || "$(params.check-status)" == "Completed" ]]; then
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxx' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## Roh5middle镜像构建报告
+                       > 状态: <font color=\"warning\">构建成功</font>
+                       > 分支: <font color=\"comment\">$(params.revision-name)</font>
+                       > 提交短哈希: <font color=\"comment\">$(tasks.misc.results.short-sha)</font>
+                       > 镜像标签: <font color=\"comment\">$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)</font>
+                       > 项目地址: [Here]($(params.repo-url-1)) "
+                    }
+                  }'
+              fi
+  - name: send-wechat-notification-2
+    when:
+      - input: $(tasks.status)
+        operator: in
+        values: [ "Failed" ]
+    params:
+    - name: revision-name
+      value: $(params.gitrevision-tag)
+    taskSpec:
+      params:
+      - name: revision-name
+      steps:
+        - name: send-notification
+          image: curlimages/curl
+          script: |
+            #!/usr/bin/env sh
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxx' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## Roh5middle镜像构建报告
+                       > 状态: <font color=\"warning\">构建失败</font>
+                       > 分支: <font color=\"comment\">$(params.revision-name)</font>
+                       > 提交短哈希: <font color=\"comment\">$(tasks.misc.results.short-sha)</font>
+                       > 镜像标签: <font color=\"comment\">$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)</font>
+                       > 项目地址: [Here]($(params.repo-url-1)) "
+
+                    }
+                  }'

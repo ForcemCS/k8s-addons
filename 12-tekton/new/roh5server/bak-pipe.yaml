@@ -1,0 +1,167 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: roh5-push-image
+  namespace: ci
+spec:
+  description: |
+    此流水线只适用于ROH5server游戏服（或者说是适用三个仓库共同构建镜像的项目）    
+  params:
+  - name: repo-url-roh5server
+    type: string
+    description: roh5server项目地址
+  - name: repo-url-config2
+    type: string
+    description: config2的项目地址
+  - name: repo-url-ro5hprotobuf
+    type: string
+    description: ro5hprotobuf的项目地址
+  - name: subdirectory-roh5server
+    type: string
+  - name: subdirectory-config2
+    type: string
+  - name: subdirectory-ro5hprotobuf
+    type: string
+  - name: gitrevision-tag
+    type: string
+    description: 项目tag名称(也可以是分支,但是此流水线只适用Tag)
+  - name: container_image
+  workspaces:
+  - name: shared-data
+  - name: docker-credentials
+  - name: gitlab-credentials
+    description: My ssh credentials
+  tasks:
+  - name: fetch-source-roh5server
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: ssh-directory
+      workspace: gitlab-credentials
+    params:
+    - name: subdirectory
+      value: $(params.subdirectory-roh5server)
+    - name: url
+      value: $(params.repo-url-roh5server)
+    - name: revision
+      value: $(params.gitrevision-tag)
+  - name: fetch-source-config2
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: ssh-directory
+      workspace: gitlab-credentials
+    params:
+    - name: subdirectory
+      value: $(params.subdirectory-config2)
+    - name: url
+      value: $(params.repo-url-config2)
+    - name: revision
+      value: $(params.gitrevision-tag)
+  - name: fetch-source-ro5hprotobuf
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    - name: ssh-directory
+      workspace: gitlab-credentials
+    params:
+    - name: subdirectory
+      value: $(params.subdirectory-ro5hprotobuf)
+    - name: url
+      value: $(params.repo-url-ro5hprotobuf)
+    - name: revision
+      value: $(params.gitrevision-tag)
+  - name: misc
+    runAfter:
+    - fetch-source-roh5server
+    - fetch-source-config2
+    - fetch-source-ro5hprotobuf
+    workspaces:
+    - name: source
+      workspace: shared-data
+    taskSpec:
+      workspaces:
+      - name: source
+      results:
+      - name: current-ts
+      steps:
+      - image: zshusers/zsh:4.3.15
+        script: |
+          #!/usr/bin/env zsh
+          ls -R $(workspaces.source.path)/
+      - name: print-date-unix-timestamp
+        image: bash:latest
+        env:
+          - name: TZ
+            value: "Asia/Shanghai"
+        script: |
+          #!/usr/bin/env bash
+          date  +"%Y%m%d-%H-%M-%S" | tr -d '\n' |  tee $(results.current-ts.path)
+  - name: build-push
+    runAfter:
+    - misc
+    taskRef:
+      name: kaniko
+    workspaces:
+    - name: source
+      workspace: shared-data
+      #subPath: $(params.subdirectory)
+    - name: dockerconfig
+      workspace: docker-credentials
+    params:
+    - name: IMAGE
+      value: $(params.container_image):$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)
+    - name: EXTRA_ARGS
+      value: [ "--skip-tls-verify","--insecure","--cache=true" ]
+  finally:
+  - name: send-wechat-notification  # when expression using execution status, evaluates to false		  
+    when:
+      - input: $(tasks.status)
+        operator: in
+        values: [ "Succeeded", "Completed" ]
+    params:
+    - name: revision-name
+      value: $(params.gitrevision-tag)
+    - name: check-status
+      value: $(tasks.build-push.status)
+    taskSpec:
+      params:
+      - name: revision-name
+      - name: check-status
+      steps:
+        - name: send-notification
+          image: curlimages/curl
+          script: |
+            #!/usr/bin/env sh
+              if [[ "$(params.check-status)" == "Succeeded" || "$(params.check-status)" == "Completed" ]]; then
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## ROH5server镜像构建报告
+                       > 状态:<font color=\"warning\">构建成功</font>
+                       > 分支/Tag:<font color=\"comment\">$(params.revision-name)</font>
+                       > 镜像标签:<font color=\"comment\">$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)</font>
+                    }
+                  }'
+              else
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## ROH5server镜像构建报告
+                       > 状态:<font color=\"warning\">构建失败</font>
+                       > 分支:<font color=\"comment\">$(params.revision-name)</font>
+                       > 镜像标签:<font color=\"comment\">$(params.gitrevision-tag)-$(tasks.misc.results.current-ts)</font>
+                    }
+                  }'
+                echo $(params.check-status)
+              fi

@@ -1,0 +1,115 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: roh5server-push-image
+  namespace: ci
+spec:
+  description: |
+    此流水线只适用于ROH5server游戏服（或者说是适用三个仓库共同构建镜像的项目）    
+  params:
+  - name: image
+  - name: insecure-registry1
+  - name: insecure-registry2
+  workspaces:
+  - name: shared-data
+  tasks:
+  - name: misc
+    workspaces:
+    - name: source
+      workspace: shared-data
+    taskSpec:
+      workspaces:
+      - name: source
+      results:
+      - name: current-ts
+      steps:
+      - image: zshusers/zsh:4.3.15
+        script: |
+          #!/usr/bin/env zsh
+          ls -R $(workspaces.source.path)/
+      - name: print-date-unix-timestamp
+        image: bash:latest
+        env:
+          - name: TZ
+            value: "Asia/Shanghai"
+        script: |
+          #!/usr/bin/env bash
+          date  +"%Y%m%d-%H-%M-%S" | tr -d '\n' |  tee $(results.current-ts.path)
+  - name: build-image
+    runAfter:
+    - misc
+    taskRef:
+      name: docker-build
+    workspaces:
+    - name: source
+      workspace: shared-data
+      #subPath: $(params.subdirectory)
+    params:
+    - name: current-ts
+      value: $(tasks.misc.results.current-ts)
+    - name: image
+      value: $(params.image)
+    - name: insecure-registry1
+      value: $(params.insecure-registry1)
+    - name: insecure-registry2
+      value: $(params.insecure-registry2)
+  finally:
+  - name: send-wechat-notification-1  # when expression using execution status, evaluates to false
+    when: 
+      - input: $(tasks.status) 
+        operator: in
+        values: [ "Succeeded", "Completed" ]
+    params:
+    - name: revision-name
+      value: $(params.image)
+    - name: check-status
+      value: $(tasks.build-image.status)
+    taskSpec:
+      params:
+      - name: revision-name
+      - name: check-status
+      steps:
+        - name: send-notification
+          image: curlimages/curl
+          script: | 
+            #!/usr/bin/env sh
+              if [[ "$(params.check-status)" == "Succeeded" || "$(params.check-status)" == "Completed" ]]; then
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## ROH5server镜像构建报告
+                       > 状态: <font color=\"warning\">构建成功</font>
+                       > 分支/Tag: <font color=\"comment\">$(params.revision-name)</font>
+                       > 镜像标签: <font color=\"comment\">$(params.revision-name)-$(tasks.misc.results.current-ts)</font>"
+                    }
+                  }'
+              fi
+  - name: send-wechat-notification-2  # when expression using execution status, evaluates to false
+    when: 
+      - input: $(tasks.build-image.status) 
+        operator: in
+        values: [ "Failed" ]
+    params:
+    - name: revision-name
+      value: $(params.image)
+    taskSpec:
+      params:
+      - name: revision-name
+      steps:
+        - name: send-notification
+          image: curlimages/curl
+          script: | 
+            #!/usr/bin/env sh
+                curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx' \
+                -H 'Content-Type: application/json' \
+                -d '{
+                    "msgtype": "markdown",
+                    "markdown": {
+                      "content": "## ROH5server镜像构建报告
+                       > 状态: <font color=\"warning\">构建失败</font>
+                       > 分支: <font color=\"comment\">$(params.revision-name)</font>
+                       > 镜像标签: <font color=\"comment\">$(params.revision-name)-$(tasks.misc.results.current-ts)</font>"
+                    }
+                  }'

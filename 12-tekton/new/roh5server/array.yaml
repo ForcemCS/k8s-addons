@@ -1,0 +1,50 @@
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  generateName: array-with-default-
+  namespace: ci
+spec:
+  serviceAccountName: tekton-triggers-example-sa
+  params:
+    - name: array-to-echo
+      value:
+        - "foo"
+        - "bar"
+  taskSpec:
+    params:
+      - name: array-to-echo
+        type: array
+      - name: another-array-to-echo
+        type: array
+        default:
+        - "foo-default"
+        - "bar-default"
+      - name: string-to-echo
+        type: string
+        default: "baz"
+    results:
+      - name: array-test
+    steps:
+      # this step should echo "foo bar foo-default bar-default baz"
+      - name: echo-params
+        image:  bash:latest
+        args: [
+          "echo",
+          "-n",
+          "$(params.array-to-echo[*])",
+          "$(params.another-array-to-echo[*])",
+          "$(params.string-to-echo)",
+          " | tee $(results.array-test.path)"
+        ]
+      - name: echo
+        image: bash:latest
+        script: |
+          #!/usr/bin/env bash
+          set -e
+          echo $(tasks.echo-params.results.array-test)
+          sid=($(tasks.echo-params.results.array-test))
+          length=${#sid[@]}
+          for ((i=0; i<$length ;i++))
+          do
+              echo ${sid[${i}]} >> game-stop.yaml
+          done

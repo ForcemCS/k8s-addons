@@ -1,0 +1,120 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: docker-build
+  namespace: ci
+spec:
+  params:
+  - name: image
+    description: 要构建的镜像名称
+  - name: builder-image
+    description: 执行构建的镜像
+    default: registry.ro3.xyz/docker:latest
+  - name: sidecar-image
+    description: 边车镜像
+    default: registry.ro3.xyz/docker-sidecar:v1
+  - name: dockerfile
+    description: Path to the Dockerfile to build.
+    default: ./roh5server-Dockerfile
+  - name: context
+    description: Path to the directory to use as context.
+    default: .
+  - name: build-extra-args
+    description: Extra parameters passed for the build command when building images.
+    default: ""
+  - name: push-extra-args
+    description: Extra parameters passed for the push command when pushing images.
+    default: ""
+  - name: insecure-registry1
+    description: 仓库地址,应该是一个列表,需要优化
+    default: ""
+  - name: insecure-registry2
+    default: ""
+  workspaces:
+  - name: source
+  results:
+  - name: IMAGE-DIGEST
+    description: Digest of the image just built.
+  steps:
+  - name: docker-build-push
+    image: $(params.builder-image)
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2376
+    - name: DOCKER_TLS_VERIFY
+      value: '1'
+    - name: DOCKER_CERT_PATH
+      value: /certs/client
+    - name: TZ
+      value: "Asia/Shanghai"
+    workingDir: $(workspaces.source.path)
+    script: |
+        #!/usr/bin/env sh
+        set -e
+        mkdir /root/.docker && mkdir  /etc/docker
+        current_ts=$(date  +"%Y%m%d-%H-%M-%S" | tr -d '\n' )
+        echo ${current_ts}
+        docker build $(params.build-extra-args)  --no-cache \
+          -f $(params.dockerfile) -t $(params.insecure-registry1)/$(params.image)-${current_ts}  $(params.context) --push
+        docker tag $(params.insecure-registry1)/$(params.image)-${current_ts}  $(params.insecure-registry2)/$(params.image)-${current_ts}
+        docker push $(params.insecure-registry2)/$(params.image)-${current_ts}
+    volumeMounts:
+    - mountPath: /certs/client
+      name: dind-certs
+    - mountPath: /root/.docker/config.json
+      name: dockerconfig
+      readOnly: false
+      subPath: config.json
+    - mountPath: /etc/docker/daemon.json
+      name: skip-tls-registry
+      readOnly: false
+      subPath: daemon.json
+  sidecars:
+  - image: $(params.sidecar-image)
+    name: server
+    args:
+      - --storage-driver=vfs
+      - --userland-proxy=false
+      - --debug
+    computeResources:
+      requests:
+        memory: "3000Mi"
+    securityContext:
+      privileged: true
+    env:
+    # Write generated certs to the path shared with the client.
+    - name: DOCKER_TLS_CERTDIR
+      value: /certs
+    volumeMounts:
+    - mountPath: /certs/client
+      name: dind-certs
+    # Wait for the dind daemon to generate the certs it will share with the
+    # client.
+    - mountPath: /root/.docker/config.json
+      name: dockerconfig
+      readOnly: false
+      subPath: config.json
+    - mountPath: /etc/docker/daemon.json
+      name: skip-tls-registry
+      readOnly: false
+      subPath: daemon.json
+    readinessProbe:
+      periodSeconds: 1
+      exec:
+        command: ['ls', '/certs/client/ca.pem']
+  volumes:
+  - name: dind-certs
+    emptyDir: {}
+  - name: dockerconfig
+    secret:
+      secretName: registry-secret
+      items:
+        - key: .dockerconfigjson
+          path: config.json
+  - name: skip-tls-registry
+    secret:
+      secretName: insecure-secret
+      items:
+        - key: .dockerconfigjson
+          path: daemon.json
+

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ro3inter-deployment
+  namespace: ci
+  labels:
+    app: ro3inter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ro3inter
+  template:
+    metadata:
+      labels:
+        app: ro3inter
+    spec:
+      containers:
+      - name: ro3inter
+        image: imageRegistry/ro3inter:v4
+        ports:
+        - containerPort: 8090
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ro3inter-service
+  namespace: ci
+spec:
+  selector:
+    app: ro3inter
+  ports:
+  - name: ro3inter-svc
+    protocol: TCP
+    port: 80
+    targetPort: 8090
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: Interceptor
+metadata:
+  name: ro3inter
+  namespace: ci
+  labels:
+    server/type: http
+spec:
+  clientConfig:
+    service:
+      name: ro3inter-service
+      namespace: ci
+      path: "check"
+      port: 80

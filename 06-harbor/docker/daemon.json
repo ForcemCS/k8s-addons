@@ -1,0 +1,12 @@
+{
+"registry-mirrors" : [
+    "https://mirror.ccs.xxxx", 
+    "https://docker.m.daocloud.io", 
+    "https://docker.1panel.live",
+    "https://quay.m.daocloud.io",
+    "https://k8s-gcr.m.daocloud.io"
+  ],
+  "insecure-registries" : [
+    "registry.xxxxx"
+  ]
+}

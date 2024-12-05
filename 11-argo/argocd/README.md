@@ -1,5 +1,5 @@
 ## The reconciliation loop
-
+Argo CD 自动同步应用程序的时间可以手动配置，但是又局限性，我们可以使用GIT Commit的方式
 [Git Webhook](https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/)
 
 使用 webhook 非常高效，因为现在当你向 Git 提交东西时，你的 Argo CD 安装绝不会延迟。如果只使用默认的轮询方式，那么 Argo CD 可能需要等待长达 3 分钟（或您设置的任何同步时间）才能检测到更改。有了 Webhook，只要 Git 有任何变动，Argo CD 就会立即运行同步。

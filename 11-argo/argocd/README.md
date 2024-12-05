@@ -1,6 +1,7 @@
 ## The reconciliation loop
 
 [Git Webhook](https://argo-cd.readthedocs.io/en/stable/operator-manual/webhook/)
+
 使用 webhook 非常高效，因为现在当你向 Git 提交东西时，你的 Argo CD 安装绝不会延迟。如果只使用默认的轮询方式，那么 Argo CD 可能需要等待长达 3 分钟（或您设置的任何同步时间）才能检测到更改。有了 Webhook，只要 Git 有任何变动，Argo CD 就会立即运行同步。
 
 ## Application Health

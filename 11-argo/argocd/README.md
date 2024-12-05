@@ -5,12 +5,12 @@ Argo CD 自动同步应用程序的时间可以手动配置，但是又局限性
 
 ## Application Health
 可能的值有:
-“Healthy”     -> Resource is 100% healthy
-“Progressing” -> 资源不健康，但仍有机会达到健康状态
-“Suspended”   -> 资源已暂停或暂停。典型的例子是 cron 作业
-“Missing”     -> 资源不在群集中
-“Degraded”    -> 资源状态显示失败或资源无法及时达到健康状态
-“Unknown”     -> 健康评估失败，实际健康状态未知
+- “Healthy”     -> Resource is 100% healthy
+- “Progressing” -> 资源不健康，但仍有机会达到健康状态
+- “Suspended”   -> 资源已暂停或暂停。典型的例子是 cron 作业
+- “Missing”     -> 资源不在群集中
+- “Degraded”    -> 资源状态显示失败或资源无法及时达到健康状态
+- “Unknown”     -> 健康评估失败，实际健康状态未知
 
 对于自定义 Kubernetes 资源，健康状况是在 Lua 脚本中定义的。具有自定义健康状况定义的资源包括
 

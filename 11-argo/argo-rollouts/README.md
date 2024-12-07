@@ -21,6 +21,13 @@
 
 Argo Rollouts 是专为 Kubernetes 设计的渐进式交付控制器。它采用循序渐进的部署方式，而不是 “一蹴而就 ”的方式，让您能够以最少/零停机时间部署应用程序。
 
+Argo Rollouts 可为您的 Kubernetes 集群增效，除了滚动更新外，您现在还可以进行以下操作
++ 蓝/绿部署
++ 金丝雀部署
++ A/B 测试
++ 自动回滚
++ Integrated Metric analysis
+
 Argo Rollouts 的改进 - 预览服务 (Preview Service): Argo Rollouts 不仅仅是简单的切换。在切换流量到绿色（新版本）之前，它会创建一个额外的“preview” Kubernetes service。这个预览服务指向绿色版本，但不会接收生产流量。
 
 一段时间后（具体时间可在 Argo Rollouts 中配置），旧版本会被完全缩减（以保护资源）

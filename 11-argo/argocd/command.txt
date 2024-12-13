@@ -71,3 +71,22 @@ argocd app create guestbook \
 
 
 当我们扩展副本的时候kubectl scale --replicas=3 deployment simple-deployment APP只会标记为不同步。当我们运行sync的时候。又恢复到了一个副本
+
+# argocd  管理多个K8S集群
+在外部的K8S集群VM的管理终端上执行
+1. argocd  login  gitops.h2.xxxx.cn   --grpc-web
+2. kubectl  config  get-contexts 
+3. argocd cluster add  cls-ojflcxf9 --name tx-sanbox
+
+然后执行（只是创建了一个服务账号argocd-manager，以便从第一个群集部署应用程序）
+1. kubectl get serviceaccount argocd-manager -n kube-system
+
+# ApplicationSet的最佳用途
+当用户或团队有 "太多 "应用程序需要管理，并需要执行以下操作时
++ 部署到多个 Kubernetes 集群
++ 部署到不同的命名空间
++ 在单个 Kubernetes 集群上部署到不同命名空间
++ 从不同的 Git 仓库或文件夹/分支进行部署
+
+## Generators 
+Generators会告知 ApplicationSet 如何生成多个app以及如何部署它们。目前有 6 个主要Generators可应用于模板，以支持 ApplicationSet 的不同用例，还有 2 个Generators可用于组合主要Generators。

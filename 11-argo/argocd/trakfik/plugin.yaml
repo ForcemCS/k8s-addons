@@ -1,0 +1,74 @@
+configs:
+  ## Ref: https://github.com/argoproj/argo-cd/blob/master/docs/operator-manual/argocd-cm.yaml
+  # 为cmp生成ConfigMap
+  # 参考: https://argo-cd.readthedocs.io/en/stable/operator-manual/config-management-plugins/
+  cmp:
+    #为cmp创建CconfigMap,名称为argocd-cmp-cm
+    create: true
+    annotations: {}
+    plugins:
+      simple-helm-cmp:		  
+        generate:
+          command: [sh, /var/run/argocd/helm-plugin/generate.sh]
+        discover:
+          fileName: "./values.yaml"
+        parameters:
+          static:
+            - name: values-files
+              title: VALUES FILES
+              collectionType: array
+          dynamic:
+            command: [sh, /var/run/argocd/helm-plugin/get-parameters.sh]
+repoServer:
+  extraContainers:
+    - name: simple-helm-cmp
+      command: [/var/run/argocd/argocd-cmp-server]
+      #args: [--loglevel, debug]
+      image: busybox
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: simple-helm-cmp.yaml
+          name: argocd-cmp-cm
+        - mountPath: /helm-working-dir
+          name: helm-plugin-tmp
+        - mountPath: /var/run/argocd/helm-plugin/generate.sh
+          subPath: generate.sh
+          name: helm-plugin-scripts
+        - mountPath: /var/run/argocd/helm-plugin/get-parameters.sh
+          subPath: get-parameters.sh
+          name: helm-plugin-scripts
+        - mountPath: /usr/local/bin
+          name: helm-plugin-tools
+  initContainers:
+    - name: helm-plugin-setup
+      image: busybox
+      command:
+        - sh
+        - -c
+        - |
+          wget https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz -O - | tar xz && mv linux-amd64/helm /tools/helm && chmod +x /tools/helm
+          wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -O /tools/jq && chmod +x /tools/jq
+          wget https://github.com/mikefarah/yq/releases/download/v4.30.6/yq_linux_amd64 -O /tools/yq && chmod +x /tools/yq
+      volumeMounts:
+        - mountPath: /tools
+          name: helm-plugin-tools
+  volumeMounts: []
+  # -- Additional volumes to the repo server pod
+  volumes:
+    - configMap:
+        name: argocd-cmp-cm
+      name: argocd-cmp-cm
+    - configMap:
+        name: helm-plugin-scripts
+      name: helm-plugin-scripts
+    - emptyDir: {}
+      name: helm-plugin-tmp
+    - emptyDir: {}
+      name: helm-plugin-tools

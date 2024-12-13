@@ -1,0 +1,5 @@
+global:
+  domain: gitops.h2.xxxx.cn 
+configs:
+  params:
+    server.insecure: true

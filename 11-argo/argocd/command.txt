@@ -1,1 +1,73 @@
 helm    -n argocd   upgrade --install    argocd  --version 7.3.11  argo/argo-cd  --values  values.yaml
+---
+## 安装
+helm    -n argocd   upgrade --install    argocd  --version 7.7.7  argo/argo-cd  --values  values.yaml
+#更新（安装安装示例）
+helm    -n argocd   upgrade --install    argocd  argo-cd-7.7.7.tgz  --values  values.yaml --values plugin.yaml
+---------
+## 获取第一次安装以后的密码
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d 
+#更新初始化密码
+argocd admin initial-password -n argocd
+#设置自定义的密码
+argocd  login  gitops.h2.xxx.cn   --grpc-web
+argocd account update-password
+密码：EV8qPj1mDl
+---------
+
+# 常用命令
+argocd app list
+argocd app get demo
+argocd app history demo
+argocd app delete demo
+
+## 手动同步
+argocd app create demo2 \
+--project default \
+--repo https://github.com/codefresh-contrib/gitops-certification-examples \
+--path "./simple-app" \
+--dest-namespace default \
+--dest-server https://kubernetes.default.svc
+
+argocd app sync demo2
+
+## SSH 认证
+authorized_keys 如果某一个人手里有一枚私钥，他的对等公钥在则个authorized_keys，那么他就可以免密认证到这台服务器
+
+known_hosts: 这个文件存储了你之前连接过的 SSH 服务器的主机密钥（也称为服务器公钥）。当你再次连接到同一服务器时，
+SSH 客户端会将服务器提供的主机密钥与 known_hosts 文件中存储的密钥进行比较。如果密钥不匹配，则会发出警告，提示你可能正在连接到一个伪造的服务器，从而防止中间人攻击。
+用例：在自动化脚本中，可以配置 SSH 客户端严格检查 known_hosts 文件，以防止连接到未经授权的服务器。
+     #列出所有已配置的 SSH 已知主机条目
+	 argocd cert list --cert-type ssh
+	 #将服务器的所有可用 SSH 公共主机密钥添加到 ArgoCD
+	 ssh-keyscan  code.xxxxxxxx.ccc.com  |  argocd cert add-ssh --batch
+	 argocd repo add git@code.ddd.ccc.com:codefresh/gitops-certification-examples.git --ssh-private-key-path ~/.ssh/id_rsa
+         argocd  repo list
+
+## 同步策略
+
+Auto-pruning of resources 如果git存储库删除了资源则集群中也会删除相应的资源
+Self-Heal of cluster      如果对集群进行了修改，则会恢复到git存储库的状态
+
+argocd app create demo \
+--project default \
+--repo https://github.com/ForcemCS/gitops-certification-examples.git \
+--path "./sync-strategies/" \
+--sync-policy auto \
+--dest-namespace default \
+--dest-server https://kubernetes.default.svc
+
+argocd app create guestbook \
+  --repo git@code.ddd.ccc.com:argo-examples/argocd-example-apps.git  \
+  --path helm-guestbook/ \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace guestbook \
+  --sync-policy automated \
+  --auto-prune \
+  --self-heal \
+  --sync-option CreateNamespace=true \
+  --values values-production.yaml \
+  --project default
+
+
+当我们扩展副本的时候kubectl scale --replicas=3 deployment simple-deployment APP只会标记为不同步。当我们运行sync的时候。又恢复到了一个副本

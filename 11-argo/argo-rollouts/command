@@ -1,0 +1,14 @@
+kubectl argo rollouts list rollouts
+kubectl argo rollouts status simple-rollout
+kubectl argo rollouts get rollout simple-rollout
+
+kubectl get rs
+
+kubectl argo rollouts set image simple-rollout webserver-simple=docker.io/kostiscodefresh/gitops-canary-app:v2.0
+
+kubectl argo rollouts get rollout simple-rollout
+
+kubectl argo rollouts promote simple-rollout (autoPromotionEnabled: false)
+
+kubectl argo rollouts get rollout simple-rollout --watch
+

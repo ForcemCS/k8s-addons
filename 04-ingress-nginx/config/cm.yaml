@@ -1,0 +1,17 @@
+apiVersion: v1
+data:
+  access-log-path: /var/log/nginx/nginx_access.log
+  allow-snippet-annotations: "false"
+  error-log-path: /var/log/nginx/nginx_error.log
+  keep-alive-requests: "1000"
+  max-worker-connections: "65536"
+  upstream-keepalive-connections: "2000"
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: ingress-nginx
+    meta.helm.sh/release-namespace: ingress-nginx
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+  resourceVersion: "1041829043"
+  uid: 092f7b83-07f5-4d77-abc7-bc694164bc92

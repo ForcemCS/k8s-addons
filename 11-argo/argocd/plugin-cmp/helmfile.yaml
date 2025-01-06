@@ -1,0 +1,59 @@
+configs:
+  cmp:
+    create: true
+    annotations: {}
+    plugins:
+      helmfile:
+        init:
+          command: [sh, -c, 'echo "正在初始化..."']
+        generate:
+          command: [sh, -c]
+          args: ["helmfile template --quiet "]
+        discover:
+          fileName: "./helmfile.yaml"
+       # parameters:
+       #   static:
+       #   - name: values-files
+       #     required: true
+       #     title: Values Files
+       #     collectionType: array
+          #- name: values
+          #  required: false
+          #  string: >-
+          #    resources:
+          #      cpu: 200m
+          #      memory: 1000Mi
+          #- name: helm-parameters
+          #  required: false
+          #  map: 
+          #    image.repository: my.example.com/gcr-proxy/test
+          #    image.tag: "0.1"
+repoServer:
+  extraContainers:
+    - name: helmfile
+      command:
+        - "/var/run/argocd/argocd-cmp-server"
+      image: ghcr.io/helmfile/helmfile:v0.169.2
+      imagePullSecrets:
+      - name: tcr-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: helmfile.yaml
+          name: argocd-cmp-cm
+        - mountPath: /tmp
+          name: cmp-tmp
+  initContainers: []
+  volumeMounts: []
+  volumes:
+   - name: argocd-cmp-cm
+     configMap:
+       name: argocd-cmp-cm
+   - name: cmp-tmp
+     emptyDir: {}

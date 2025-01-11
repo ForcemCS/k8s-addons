@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openvpn-deployment
+  labels:
+    app: openvpn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openvpn
+  template:
+    metadata:
+      labels:
+        app: openvpn
+    spec:
+      imagePullSecrets:
+      - name: tcr-registry
+      initContainers:
+        - name: install
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - 'echo -e -n "<user>\n<passwd>" > /auth/auth.txt'
+          volumeMounts:
+            - name: workdir
+              mountPath: /auth
+      containers:
+        - name: openvpn-container
+          image: example.com/proj/openvpn:v2
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              #openvpn --config str-las304_s439341_account.ovpn --auth-user-pass /scripts/auth.txt
+              sleep 10000
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          volumeMounts:
+            - name: tun-device
+              mountPath: /dev/net/tun
+            - name: workdir
+              mountPath: /scripts/auth.txt
+              subPath: auth.txt
+      volumes:
+        - name: tun-device
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+        - name: workdir
+          emptyDir: {}

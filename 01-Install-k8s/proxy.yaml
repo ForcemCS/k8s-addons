@@ -32,7 +32,7 @@ spec:
           command: ["/bin/bash", "-c"]
           args:
             - |
-              #openvpn --config str-las304_s439341_account.ovpn --auth-user-pass /scripts/auth.txt
+              #openvpn --config str-las304_s439341_account.ovpn --auth-user-pass auth.txt
               sleep 10000
           securityContext:
             capabilities:

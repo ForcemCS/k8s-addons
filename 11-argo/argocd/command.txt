@@ -43,6 +43,12 @@ SSH 客户端会将服务器提供的主机密钥与 known_hosts 文件中存储
 	 ssh-keyscan  code.xxxxxxxx.ccc.com  |  argocd cert add-ssh --batch
 	 argocd repo add git@code.ddd.ccc.com:codefresh/gitops-certification-examples.git --ssh-private-key-path ~/.ssh/id_rsa
          argocd  repo list
+--
+假设我们在某一台测试机生成了一对密钥信息，私钥通过secret放在了.ssh下，公钥放在了gitlab中，放我们执行git clone的时候，还是需要回答yes,因为Git 客户端并没有自动信任远程 Git 服务器的指纹，
+为了去掉 yes 确认步骤，你需要将远程 Git 服务器的公钥添加到 Pod 内的 ~/.ssh/known_hosts 文件中
+
+kubectl  -n workflow create secret generic secret-ssh-auth   --from-file=ssh-privatekey=./id_rsa  --from-file=known_hosts=./known_hosts111   --type=kubernetes.io/ssh-auth
+--
 
 ## 同步策略
 

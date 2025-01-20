@@ -69,6 +69,12 @@ container_cpu_usage_seconds_total 计数器类型的指标
    topk(3, sum(rate(container_cpu_usage_seconds_total{container!="",pod=~"game-roh5-server.*"}[5m])) by (pod))
    ```
 
+5. 查看容器是否频繁受到 CPU 节流，如果部署cpu limit的原因，应该分析应用程序代码
+
+   ```
+   sum(rate(container_cpu_cfs_throttled_seconds_total{namespace=~"hdh5", pod=~"game-hdh5-server-10003-6b8db8dcbf-nlvh4", image!="", container!="", cluster="cls-po5g6rh8"}[$__rate_interval])) by (container)
+   ```
+
 ## 备注
 
 ```

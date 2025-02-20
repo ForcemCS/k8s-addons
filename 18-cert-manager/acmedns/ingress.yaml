@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: acmedns
+  namespace: acme-dns
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - auth.acmedns.example.cn
+    secretName: acme-dns-tls
+  rules:
+  - host: auth.acmedns.example.cn
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: acme-dns
+            port:
+              number: 443

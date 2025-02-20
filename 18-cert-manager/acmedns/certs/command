@@ -1,0 +1,4 @@
+kubectl create secret generic acme-dns-tls \
+  --namespace acme-dns \
+  --from-file=fullchain.pem=./fullchain.pem \
+  --from-file=privkey.pem=./privkey.pem

@@ -1,0 +1,42 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: acmedns
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: acmedns-pv
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: acmedns
+  local:
+    path: /root/acmedns/data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - vm-12-16-centos
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: acmedns-pvc
+  namespace: acme-dns
+spec:
+  storageClassName: acmedns
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

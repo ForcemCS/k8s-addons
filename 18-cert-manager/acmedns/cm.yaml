@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: acme-dns-config
+  namespace: acme-dns
+data:
+  config.cfg: |
+    [general]
+    # 监听所有网络接口，支持 UDP 和 TCP
+    listen = "0.0.0.0:53"
+    protocol = "both"
+    
+    # ACME-DNS 服务域名（你需要提前设置 DNS 解析）
+    domain = "auth.acmedns.example.cn"
+    nsname = "auth.acmedns.example.cn"
+    nsadmin = "wukui@example.cn"
+
+    # 预定义的 DNS 记录（需要改成你的服务器公网 IP）
+    # 同时需要在公有云上做同样的解析
+    # ACME-DNS 服务器将会负责 所有 *.acmedns.example.cn 的 DNS 解析
+    # ACME-DNS 只管理 _acme-challenge 相关的 TXT 记录，不影响你其他的 DNS 解析
+    # 外部查询 *.acmedns.example.cn 记录时，会先通过这个 权威NS 解析
+    records = [
+        "auth.acmedns.example.cn. A public ip",
+        "acmedns.example.cn. NS auth.acmedns.example.cn."
+    ]
+
+    debug = false
+
+    [database]
+    # 使用 SQLite 存储 DNS 记录，数据存储在 /var/lib/acme-dns
+    engine = "sqlite3"
+    connection = "/var/lib/acme-dns/acme-dns.db"
+
+    [api]
+    ip = "0.0.0.0"
+    disable_registration = false
+    port = "443"
+    tls_cert_privkey = "/etc/tls/acmedns.org/privkey.pem"
+    tls_cert_fullchain = "/etc/tls/acmedns.org/fullchain.pem"
+
+    # 使用 Let's Encrypt 颁发 HTTPS 证书
+    tls = "letsencryptstaging"
+    acme_cache_dir = "/var/lib/acme-dns/api-certs"
+    notification_email = "wukui@example.cn"
+
+    # 允许所有来源访问 ACME API
+    corsorigins = ["*"]
+    
+    use_header = false
+    header_name = "X-Forwarded-For"
+
+    [logconfig]
+    loglevel = "info"
+    logtype = "stdout"
+    logformat = "text"

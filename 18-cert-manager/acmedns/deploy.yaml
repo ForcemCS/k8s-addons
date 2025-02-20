@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acme-dns
+  namespace: acme-dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: acme-dns
+  template:
+    metadata:
+      labels:
+        app: acme-dns
+    spec:
+      containers:
+        - name: acme-dns
+          image: joohoi/acme-dns:latest
+          ports:
+            - containerPort: 53
+              protocol: UDP
+            - containerPort: 53
+              protocol: TCP
+            - containerPort: 443
+          volumeMounts:
+            - mountPath: /etc/acme-dns
+              name: config-volume
+              readOnly: true
+            - mountPath: /var/lib/acme-dns
+              name: acme-dns-storage
+            #- name: acme-dns-tls
+            #  mountPath: "/etc/tls/acmedns.org"
+            #  readOnly: true
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: acme-dns-config
+        - name: acme-dns-storage
+          persistentVolumeClaim:
+            claimName: acmedns-pvc
+        #- name: acme-dns-tls
+        #  secret:
+        #    secretName: acme-dns-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acme-dns
+  namespace: acme-dns
+spec:
+  selector:
+    app: acme-dns
+  ports:
+    - name: dns-udp
+      port: 53
+      protocol: UDP
+      targetPort: 53
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+      targetPort: 53
+    - name: https
+      port: 443
+      targetPort: 443

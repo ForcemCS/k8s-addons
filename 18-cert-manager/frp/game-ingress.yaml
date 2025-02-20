@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-hd-204-svc
+  namespace: hdh5
+spec:
+  ports:
+  - port: 10003       
+    targetPort: 30001   #frps透传的端口
+    protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  namespace: hdh5
+  name: server-hd-204-svc
+subsets:
+  - addresses:
+      - ip: 10.0.12.16    #frps透传所在的主机
+    ports:
+      - port: 30001        
+        protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: hdh5
+  name: server-hd-204-svc-ingress
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: server-hdh5.example.cn
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: server-hd-204-svc
+            port:
+              number: 10003
+  tls:
+  - hosts:
+    - server-hdh5.example.cn
+    secretName: hdh5-alls-tls

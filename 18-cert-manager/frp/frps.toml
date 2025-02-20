@@ -1,0 +1,20 @@
+[common]
+#frp 服务器监听的端口。客户端需要通过这个端口连接
+proxyBindAddr = "127.0.0.1"
+#subdomain_host = 175.24.206.53
+bind_port = 7000
+#vhost_http_port = 30001
+#启用 TLS 进行安全通信。
+tls_enable = true
+#frp 客户端用来与 frp 服务器进行身份验证的密码
+token = IamPassword
+#frp dashboard 将监听的 IP 地址。
+#dashboard_addr = 0.0.0.0
+#dashboard_port = 7500
+#dashboard_user = admin
+#dashboard_pwd = frps@admin
+#frp 服务器日志文件的文件路径
+log_file = /var/log/frps.log
+log_level = debug
+log_max_days = 3
+allow_ports = 30001-30025

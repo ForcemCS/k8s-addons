@@ -2,7 +2,7 @@
 
 假设我们的开发环境在一台ubuntu服务器安装了K3S，但是没有公网IP地址。我们可以通过一台云服务商带有public IP的虚拟机实现转发。
 
-1. 我们K3S内网的一个服务，例如center-hdh5.sandbox-204.h.xinghuihuyu.cn
+1. 我们K3S内网的一个服务，例如center-hdh5.example.cn
 
    ```yaml
    apiVersion: networking.k8s.io/v1
@@ -22,7 +22,7 @@
    spec:
      ingressClassName: nginx
      rules:
-     - host: center-hdh5.sandbox-204.h.xinghuihuyu.cn
+     - host: center-hdh5.example.cn
        http:
          paths:
          - backend:
@@ -64,7 +64,7 @@
    
    ```
 
-3. 让center-hdh5.sandbox-204.h.xinghuihuyu.cn解析到公网地址上
+3. 让center-hdh5.example.cn解析到公网地址上
 
 4. 假设这台公有云EC2上也部署了K3S，并且作为frps(假设认为是30001传输数据的，请查看配置文件)
 

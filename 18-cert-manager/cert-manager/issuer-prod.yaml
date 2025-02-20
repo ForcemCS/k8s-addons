@@ -1,0 +1,21 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-prod
+  namespace: acme-dns
+spec:
+  acme:
+    # The ACME server URL
+    server: https://acme-v02.api.letsencrypt.org/directory
+    # Email address used for ACME registration
+    email: wukui@example.cn
+    # 如果你丢失了这个 Secret（例如，删除了它）就相当于丢失了 ACME 账户的密钥。
+    # 虽然你可以重新创建一个新的 Secret 和密钥，并使用新账户申请证书，但你将无法撤销（revoke）使用旧账户生成的任何证书
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    # 这意味着你需要一个 Ingress 控制器（如 Nginx Ingress Controller）来将流量路由到 cert-manager 创建的临时 Pod，
+    # 该 Pod 将提供挑战所需的响应。
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik

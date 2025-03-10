@@ -97,4 +97,4 @@
 
 5. 现在我们可以认为是访问<公网:30001>就是转发到了内网的服务。但是现在必须执行curl -kivL -H 'Host: centerwx.h2.xinghuihuyu.cn' 
 
-6. 因为我们EC2是也部署了K3S，所以可以用traefik再次做转发，具体详情请惨开配置文件
+6. 因为我们EC2是也部署了K3S，所以可以用traefik再次做转发，具体转发规则请惨开center-ingress.yaml

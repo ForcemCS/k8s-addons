@@ -4,9 +4,15 @@ server_port = 7000
 tls_enable = false
 token = IamPassword
 
-[center]
+[x1]
 type = tcp
 local_port = 80
 local_ip = 127.0.0.1
 remote_port = 30001
 #custom_domains = www.example.cn
+[x2]
+type = tcp
+local_port = 80
+local_ip = 127.0.0.1
+remote_port = 30002
+

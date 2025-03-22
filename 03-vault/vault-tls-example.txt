@@ -1,0 +1,187 @@
+将 Vault 安装到 Kubernetes 并启用 TLS 
+
+说明:
+1. 我们将使用 Kubernetes CA 创建私钥和通配符证书。这些信息通过K8S的secret存储
+2. 我们使用的环境是K3S,主要用于开发环境（单个实例），在部署生产环境之前请参考官方文档
+
+第一步：创建证书     
+1. 生成私钥
+#创建工作目录
+mkdir -p /root/k8s-addons/certs/vault
+
+#设置环境变量
+cat << EOF >> ~/.bashrc
+export VAULT_K8S_NAMESPACE="vault"
+export VAULT_HELM_RELEASE_NAME="vault"
+export VAULT_SERVICE_NAME="vault-internal"
+export K8S_CLUSTER_NAME="cluster.local"
+export WORKDIR=/root/k8s-addons/certs/vault
+export VAULT_VALUES=/root/k8s-addons/vault/
+EOF
+source ~/.bashrc 
+
+#生成私钥
+openssl genrsa -out ${WORKDIR}/vault.key 2048
+
+2.创建证书签名请求（CSR）。
+#创建 CSR 配置文件
+cat > ${WORKDIR}/vault-csr.conf <<EOF
+[req]
+default_bits = 2048
+prompt = no
+encrypt_key = yes
+default_md = sha256
+distinguished_name = kubelet_serving
+req_extensions = v3_req
+[ kubelet_serving ]
+O = system:nodes
+CN = system:node:*.${VAULT_K8S_NAMESPACE}.svc.${K8S_CLUSTER_NAME}
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = *.${VAULT_SERVICE_NAME}
+DNS.2 = *.${VAULT_SERVICE_NAME}.${VAULT_K8S_NAMESPACE}.svc.${K8S_CLUSTER_NAME}
+DNS.3 = *.${VAULT_K8S_NAMESPACE}
+IP.1 = 127.0.0.1
+EOF
+
+#生成CSR
+openssl req -new -key ${WORKDIR}/vault.key -out ${WORKDIR}/vault.csr -config ${WORKDIR}/vault-csr.conf
+
+3.颁发证书
+#创建csr.yml 文件,生成证书签名请求资源
+cat > ${WORKDIR}/csr.yaml <<EOF
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+   name: vault.svc
+spec:
+   signerName: kubernetes.io/kubelet-serving
+   #可以使用cert-manager 来自动管理和续期 Kubernetes CA 颁发的证书
+   expirationSeconds: 157680000
+   request: $(cat ${WORKDIR}/vault.csr|base64|tr -d '\n')
+   usages:
+   - digital signature
+   - key encipherment
+   - server auth
+EOF
+
+#向 Kubernetes 发送 CSR
+kubectl create -f ${WORKDIR}/csr.yaml
+
+#在 Kubernetes 中批准 CSR。
+kubectl certificate approve vault.svc
+
+#确认证书是否签发
+$ kubectl get csr vault.svc
+NAME        AGE   SIGNERNAME                      REQUESTOR       REQUESTEDDURATION   CONDITION
+vault.svc   16s   kubernetes.io/kubelet-serving   minikube-user   100d                Approved,Issued
+
+
+第二步：在 Kubernetes Secret中存储证书和私钥
+1. 检索证书
+kubectl get csr vault.svc -o jsonpath='{.status.certificate}' | openssl base64 -d -A -out ${WORKDIR}/vault.crt
+2.读取 Kubernetes CA 证书
+kubectl config view \
+--raw \
+--minify \
+--flatten \
+-o jsonpath='{.clusters[].cluster.certificate-authority-data}' \
+| base64 -d > ${WORKDIR}/vault.ca
+
+3.创建 Kubernetes 命名空间
+kubectl create namespace $VAULT_K8S_NAMESPACE
+3.创建 TLS Sevret
+kubectl create secret generic vault-ha-tls \
+   -n $VAULT_K8S_NAMESPACE \
+   --from-file=vault.key=${WORKDIR}/vault.key \
+   --from-file=vault.crt=${WORKDIR}/vault.crt \
+   --from-file=vault.ca=${WORKDIR}/vault.ca
+
+第三步：通过 Helm 部署vault
+1.创建 helm values overrides 文件
+cat > ${VAULT_VALUES}/overrides.yaml <<EOF
+global:
+   enabled: true
+   tlsDisable: false
+ui:
+  enabled: true
+  serviceType: "NodePort"
+injector:
+   enabled: true
+server:
+   extraEnvironmentVars:
+      VAULT_CACERT: /vault/userconfig/vault-ha-tls/vault.ca
+      VAULT_TLSCERT: /vault/userconfig/vault-ha-tls/vault.crt
+      VAULT_TLSKEY: /vault/userconfig/vault-ha-tls/vault.key
+   volumes:
+      - name: userconfig-vault-ha-tls
+        secret:
+         defaultMode: 420
+         secretName: vault-ha-tls
+   volumeMounts:
+      - mountPath: /vault/userconfig/vault-ha-tls
+        name: userconfig-vault-ha-tls
+        readOnly: true
+   dataStorage:
+     storageClass: local-storage-vault
+   standalone:
+      enabled: false
+   affinity: ""
+   ha:
+      enabled: true
+      replicas: 1
+      raft:
+         enabled: true
+         setNodeId: true
+         config: |
+            cluster_name = "vault-integrated-storage"
+            ui = true
+            listener "tcp" {
+               tls_disable = 0
+               address = "[::]:8200"
+               cluster_address = "[::]:8201"
+               tls_cert_file = "/vault/userconfig/vault-ha-tls/vault.crt"
+               tls_key_file  = "/vault/userconfig/vault-ha-tls/vault.key"
+               tls_client_ca_file = "/vault/userconfig/vault-ha-tls/vault.ca"
+            }
+            storage "raft" {
+               path = "/vault/data"
+            }
+            disable_mlock = true
+            service_registration "kubernetes" {}
+EOF
+2.部署vault
+helm -n $VAULT_K8S_NAMESPACE upgrade --install  $VAULT_HELM_RELEASE_NAME vault-0.29.1.tgz -f ${VAULT_VALUES}/overrides.yaml
+3.检查部署结果
+kubectl -n $VAULT_K8S_NAMESPACE get pods
+4.使用一个key share 和一个阈值对 vault-0 进行初始化。
+kubectl exec -n $VAULT_K8S_NAMESPACE vault-0 -- vault operator init \
+    -key-shares=1 \
+    -key-threshold=1 \
+    -format=json > ${WORKDIR}/cluster-keys.json
+5.获取unseal key
+VAULT_UNSEAL_KEY=$(jq -r ".unseal_keys_b64[]" ${WORKDIR}/cluster-keys.json)
+6.解封正在 vault-0 pod 上运行的 Vault。
+kubectl exec -n $VAULT_K8S_NAMESPACE vault-0 -- vault operator unseal $VAULT_UNSEAL_KEY
+7.导出根令牌
+export CLUSTER_ROOT_TOKEN=$(cat ${WORKDIR}/cluster-keys.json | jq -r ".root_token")
+8.使用根令牌进行登录
+kubectl exec -n $VAULT_K8S_NAMESPACE vault-0 -- vault login $CLUSTER_ROOT_TOKEN
+9.列出raft per
+kubectl exec -n $VAULT_K8S_NAMESPACE vault-0 -- vault operator raft list-peers
+
+第四步：此步骤是可选的
+1. 设置vault命令快捷方式
+sed -i "/alias ll='ls -l'/a alias vault='kubectl exec -n \$VAULT_K8S_NAMESPACE vault-0 -- vault'" ~/.bashrc
+echo 'export VAULT_ADDR="https://vault.vault.svc.cluster.local:8200"'  >>~/.bashrc
+echo 'export VAULT_CACERT=${WORKDIR}/vault.ca' >> ~/.bashrc
+source ~/.bashrc
+2.测试命令
+root@debian-12:~# vault   auth list 
+Path      Type     Accessor               Description                Version
+----      ----     --------               -----------                -------
+token/    token    auth_token_62bc4901    token based credentials    n/a

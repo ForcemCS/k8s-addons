@@ -1,0 +1,31 @@
+
+vault secrets enable -path=roh5  -description="ROH5项目的敏感信息"  kv-v2 
+
+
+
+vault kv put roh5/database/mysql  addr="10.10xx" port="30x" password="x1"
+vault kv put roh5/database/redis  addr="10.10xx" port="30x" password="x2"
+
+
+
+vault auth enable kubernetes
+
+
+vault write auth/kubernetes/config kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443" 
+	
+
+
+
+
+vault policy write roh5-database - <<EOF
+path "roh5/data/database/*" {
+   capabilities = ["read"]
+}
+EOF
+
+
+vault write auth/kubernetes/role/roh5 \
+      bound_service_account_names=roh5 \
+      bound_service_account_namespaces=roh5 \
+      policies=roh5-database \
+      ttl=24h

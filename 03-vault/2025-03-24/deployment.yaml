@@ -1,0 +1,58 @@
+{{ $global := . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ro3micro.fullname" $global }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    {{- include "ro3micro.labels" $global | nindent 4 }}
+spec:
+  replicas: {{ $global.Values.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ro3micro.selectorLabels" $global | nindent 6 }}
+      game-svc: "game-svc-{{ $global.Chart.Name }}"
+  template:
+    metadata:
+      labels:
+        {{- include "ro3micro.selectorLabels" $global | nindent 8 }}
+        game-svc: "game-svc-{{ $global.Chart.Name }}"
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/tls-skip-verify: 'true'
+        vault.hashicorp.com/agent-inject-status: 'update'
+        vault.hashicorp.com/role: 'roh5'
+        vault.hashicorp.com/agent-inject-secret-roh5-mysql: 'roh5/database/mysql'
+        vault.hashicorp.com/agent-inject-secret-roh5-redis: 'roh5/database/redis'
+    spec:
+      serviceAccountName: roh5
+      imagePullSecrets:
+      - name: auth-registry-secret
+      containers:
+      - name: {{ $global.Chart.Name }}
+        image: "{{ $global.Values.image.repo }}:{{ $global.Values.image.tag }}"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: TZ
+          value: {{ $.Values.timezone |quote }}
+        resources:
+          limits:
+            cpu: 1
+            memory: 800Mi
+        ports:
+        - name: server1
+          containerPort: 18000
+        volumeMounts:
+        - name: config
+          mountPath: "/workdir/config.yaml"
+          subPath: "config.yaml"
+      volumes:
+      - name: config
+        configMap:
+          # 提供你想要挂载的 ConfigMap 的名字
+          name: ro3-micro-cm 
+          # 来自 ConfigMap 的一组键，将被创建为文件
+          items:
+          - key: "config.yaml"
+            path: "config.yaml"
+

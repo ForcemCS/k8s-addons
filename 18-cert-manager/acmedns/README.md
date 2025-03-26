@@ -18,6 +18,7 @@
 
    ```
    /opt/certbot/bin/pip install certbot
+   pip install --no-cache-dir --index-url https://mirrors.aliyun.com/pypi/simple/ certbot  ##腾讯云
    ```
 
 4. 安装acme-dns

@@ -38,5 +38,5 @@
 6. 命令
 
    ```
-   certbot certonly --manual --manual-auth-hook /etc/letsencrypt/acme-dns-auth.py --preferred-challenges dns --debug-challenges --force-renewal -d \*.sandbox-204.h.xinghuihuyu.cn -d sandbox-204.h.xinghuihuyu.cn
+   certbot certonly --manual --manual-auth-hook /etc/letsencrypt/acme-dns-auth.py --preferred-challenges dns --debug-challenges --force-renewal -d \*.xxx.cn -d xxx.cn
    ```

@@ -2,7 +2,7 @@
 
 Falco 采用流式引擎架构，其基本设计理念是输入→处理→输出。
 
-<img src="C:\Users\ForceCS\Desktop\falco\img\3.png" alt="3" style="zoom: 33%;" />
+<img src="./img/3.png" alt="3" style="zoom: 33%;" />
 
 在这种模式下，Falco 不断从一个或多个来源接收事件（输入），通过丰富和检查一组规则来处理输入的事件（处理），然后输出符合规则的事件（输出）。这种流式架构允许 Falco 实时运行，提供即时威胁检测和响应能力。
 
@@ -14,7 +14,7 @@ Falco 采用流式引擎架构，其基本设计理念是输入→处理→输�
 
 Falco 可以从多种来源采集数据，大致分为两大类：主机和云。libscap 库包含控制内核模块和 eBPF 探测器的逻辑，包括加载它们、启动和停止捕获以及读取它们生成的数据。它还包含加载、管理和运行插件的逻辑。
 
-<img src="C:\Users\ForceCS\Desktop\falco\img\5.png" alt="5" style="zoom: 33%;" />
+<img src="./img/5.png" alt="5" style="zoom: 33%;" />
 
 属于主机类别的系统调用输入来自操作系统内核，可提供进程、容器、虚拟机和主机活动的可见性。
 

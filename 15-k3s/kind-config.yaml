@@ -1,0 +1,24 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraMounts:
+    # allow Falco to use devices provided by the kernel module
+  - hostPath: /dev
+    containerPath: /dev
+    # allow Falco to use the Docker unix socket
+  - hostPath: /var/run/docker.sock
+    containerPath: /var/run/docker.sock
+containerdConfigPatches:
+- |-
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+    endpoint = [
+      "https://docker.m.daocloud.io",
+      "https://docker.imgdb.de",
+      "https://docker-0.unsee.tech",
+      "https://docker.hlmirror.com",
+      "https://docker.1ms.run",
+      "https://func.ink",
+      "https://lispy.org",
+      "https://docker.xiaogenban1993.com"
+    ]

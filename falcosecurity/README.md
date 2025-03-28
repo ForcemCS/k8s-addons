@@ -63,7 +63,7 @@
 
 传感器由一个引擎组成，引擎有两个输入端：数据源和一组规则。传感器将规则应用于来自数据源的每个事件。当规则与事件相匹配时，就会产生输出。
 
-<img src="/img/2.png" alt="2" style="zoom:50%;" />
+<img src="./img/2.png" alt="2" style="zoom:50%;" />
 
 ### Data Sources 
 

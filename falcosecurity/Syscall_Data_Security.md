@@ -193,7 +193,7 @@ Falco 主要收集三类不同的系统调用元数据：
 
 Falco 与各种容器运行时（包括 Docker、Podman 以及 containerd 和 CRI-O 等 CRI 兼容运行时）建立接口，以收集容器元数据。初始化时，Falco 会查询容器运行时，建立所有运行容器的内部缓存，并更新其状态表，将进程和线程 ID 与各自的容器 ID 关联起来。容器元数据的后续更新通过 Falco 驱动程序捕获的系统调用流来处理。检测到新进程或线程时，libsinsp 要么从其内部缓存中检索容器 ID，要么查询容器运行时以更新其元数据。你会发现可用的容器元数据都集中在[field class container](https://falco.org/docs/reference/rules/supported-fields/#field-class-container),中，这些元数据可用于条件和输出格式化。
 
- <img src="C:\Users\ForceCS\Desktop\falco\img\9.png" alt="9" style="zoom: 33%;" />
+ <img src="./img/9.png" alt="9" style="zoom: 33%;" />
 
 #### Kubernetes Metadata
 

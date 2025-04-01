@@ -1,0 +1,80 @@
+apiVersion: audit.k8s.io/v1 # 这是必须的 API 版本
+kind: Policy
+# 不在 RequestReceived（请求接收）阶段生成审计日志
+omitStages:
+  - "RequestReceived"
+rules:
+  # 以 RequestResponse 级别记录 Pod 和 Deployment 变更
+  - level: RequestResponse
+    resources:
+    - group: "" # 核心 API 组
+      # 资源 "pods" 不匹配 pods 的任何子资源，这与 RBAC 策略保持一致
+      resources: ["pods", "deployments"]
+
+  # 以 RequestResponse 级别记录 ClusterRole 和 ClusterRoleBinding 变更
+  - level: RequestResponse
+    resources:
+    - group: "rbac.authorization.k8s.io" # RBAC API 组
+      # 资源 "clusterroles" 和 "clusterrolebindings" 不匹配 pods 的任何子资源，这与 RBAC 策略保持一致
+      resources: ["clusterroles", "clusterrolebindings"]
+
+  # 以 Metadata 级别记录 "pods/log" 和 "pods/status" 的访问请求
+  - level: Metadata
+    resources:
+    - group: "" # 核心 API 组
+      resources: ["pods/log", "pods/status"]
+
+  # 不记录对名为 "controller-leader" 的 ConfigMap 的请求
+  - level: None
+    resources:
+    - group: "" # 核心 API 组
+      resources: ["configmaps"]
+      resourceNames: ["controller-leader"]
+
+  # 不记录 "system:kube-proxy" 用户对 Endpoints 和 Services 资源的 Watch（监听）请求
+  - level: None
+    users: ["system:kube-proxy"]
+    verbs: ["watch"]
+    resources:
+    - group: "" # 核心 API 组
+      resources: ["endpoints", "services"]
+
+  # 不记录 "system:authenticated" 组的用户对某些非资源 URL 路径的请求
+  - level: None
+    userGroups: ["system:authenticated"]
+    nonResourceURLs:
+    - "/api*" # 通配符匹配所有 /api 开头的路径
+    - "/version"
+
+  # 以 Request 级别记录 kube-system 命名空间中的 ConfigMap 变更，并记录请求体
+  - level: Request
+    resources:
+    - group: "" # 核心 API 组
+      resources: ["configmaps"]
+    # 该规则仅适用于 "kube-system" 命名空间
+    # 空字符串 "" 可用于选择非命名空间资源
+    namespaces: ["kube-system"]
+
+  # 以 RequestResponse 级别记录所有其他命名空间中的 ConfigMap 变更
+  - level: RequestResponse
+    resources:
+    - group: "" # 核心 API 组
+      resources: ["configmaps"]
+
+  # 以 Metadata 级别记录所有命名空间中的 Secret 变更
+  - level: Metadata
+    resources:
+    - group: "" # 核心 API 组
+      resources: ["secrets"]
+
+  # 以 Request 级别记录核心 API 组和 extensions 组的所有其他资源
+  - level: Request
+    resources:
+    - group: "" # 核心 API 组
+    - group: "extensions" # 组的版本号不应包含
+
+  # 兜底规则，所有其他请求均以 Metadata 级别记录
+  - level: Metadata
+    # 适用于此规则的长时间运行请求（如 watch），不会在 RequestReceived 阶段生成审计事件
+    omitStages:
+      - "RequestReceived"

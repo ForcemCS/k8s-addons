@@ -1,0 +1,51 @@
+tty: true
+#这禁用了 Falco 的内核驱动（无论是内核模块还是 eBPF 探针）。因为这个实验的目标是分析 K8s 审计日志，而不是监控主机或 Pod 内的系统调用，所以不需要驱动程序
+driver:
+  enabled: false
+#false: 这禁用了 Falco 的采集器（通常是与驱动程序一起工作的 DaemonSet，用于收集 eBPF 数据等）
+collectors:
+  enabled: false
+#指定 Falco 的主控制器（运行 Falco 引擎的 Pod）以 Kubernetes Deployment 的形式部署。
+controller:
+  kind: deployment
+  deployment:
+    replicas: 1
+#启用 falcoctl 工具在 Helm 安装期间自动安装 Falco 的 "artifacts"（如规则文件）。
+falcoctl:
+  artifact:
+    install:
+      enabled: true
+  config:
+    artifact:
+      install:
+        #指示 falcoctl 安装名为 k8saudit-rules 的 artifact。这通常会从预配置的源（如 Falco 官方仓库）下载并放置一套专门用于分析 Kubernetes 审计日志的 Falco 规则文件到 Falco Pod 的 /etc/falco/ 目录下。
+        refs: [k8saudit-rules]
+
+falco:
+  rules_file:
+  # 指定 Falco 引擎应该加载的规则文件。这个路径通常就是上面 falcoctl 安装 k8saudit-rules artifact 后规则文件所在的位置。
+    - /etc/falco/k8s_audit_rules.yaml
+  plugins:
+    - name: k8saudit
+      #指定插件的共享库文件
+      library_path: libk8saudit.so
+      init_config: ""
+      #启动一个 HTTP 服务器。
+      #监听所有网络接口 (:) 上的 9765 端口。
+      #接收发送到 /k8s-audit 路径的 K8s 审计事件。这个端点就是 Kubernetes API Server 需要将审计日志发送到的地方。
+      open_params: "http://:9765/k8s-audit"
+    - name: json
+      library_path: libjson.so
+      init_config: ""
+  #明确指示 Falco 启动时加载 k8saudit 和 json 这两个插件
+  load_plugins: [k8saudit, json]
+
+services:
+  #NodePort 会在集群中每个节点上暴露一个静态端口（nodePort），并将流量路由到 Service 对应的 Pod（这里是 Falco Pod）。
+  - name: k8saudit-webhook
+    type: NodePort
+    ports:
+        #将上边的审计服务的端口暴露出去
+      - port: 9765 
+        nodePort: 30007
+        protocol: TCP

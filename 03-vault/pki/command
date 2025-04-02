@@ -1,0 +1,2 @@
+vault write -format=json pki_int/issue/h-dot-example-dot-cn common_name="iam.h.example.cn"  |jq -r '.data.certificate' > iam.h.example.cn.crt
+vault write -format=json pki_int/issue/h-dot-example-dot-cn common_name="iam.h.example.cn"  |jq -r '.data.private_key' > iam.h.example.cn.key

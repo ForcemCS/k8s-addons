@@ -10,7 +10,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: iam.h.xinghuihuyu.cn
+  - host: iam.h.example.cn
     http:
       paths:
       - backend:

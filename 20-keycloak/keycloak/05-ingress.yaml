@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"  
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"    #与后端的 vault-ui 服务通信时使用 HTTPS，而不是 HTTP。
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"   #强制https,当你有多个代理层，并且你想确保最终通过 HTTPS 访问时
+  name: keycloak-ingress
+  namespace: kc
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: iam.h.xinghuihuyu.cn
+    http:
+      paths:
+      - backend:
+          service:
+            name: kc-1-service
+            port:
+              number: 8443
+        path: /
+        pathType: Prefix

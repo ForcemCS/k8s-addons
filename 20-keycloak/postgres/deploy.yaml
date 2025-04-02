@@ -1,0 +1,72 @@
+#请参考[https://www.digitalocean.com/community/tutorials/how-to-deploy-postgres-to-kubernetes-cluster]
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: kc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: 'postgres:16'
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secret
+                key: db
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secret
+                key: username
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secret
+                key: password
+          ports:
+            - containerPort: 5432
+          #envFrom:
+          #  - configMapRef:
+          #      name: postgres-secret
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgresdata
+            - mountPath: /etc/postgresql/postgresql.conf
+              subPath: postgresql.conf
+              name: config-volume
+            - mountPath: /etc/postgresql/pg_hba.conf
+              subPath: pg_hba.conf
+              name: config-volume
+      volumes:
+        - name: postgresdata
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - name: config-volume
+          configMap:
+            name: postgres-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: kc
+  labels:
+    app: postgres
+spec:
+  type: NodePort
+  ports:
+    - port: 5432
+      nodePort: 30532
+  selector:
+    app: postgres

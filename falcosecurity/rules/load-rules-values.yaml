@@ -1,0 +1,31 @@
+tty: true
+driver:
+  enabled: true
+  kind: modern-bpf
+
+falcoctl:
+  config:
+    indexes:
+    - name: falcosecurity
+      url: https://falcosecurity.github.io/falcoctl/index.yaml
+    artifact:
+      install:
+        refs:
+          - falco-rules
+          - falco-incubating-rules
+          - falco-sandbox-rules
+      follow:
+        every: 6h0m0s
+        falcoVersions: http://localhost:8765/versions
+        refs:
+          - falco-rules
+          - falco-incubating-rules
+          - falco-sandbox-rules
+
+falco:
+  rules_file:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/rules.d
+    - /etc/falco/falco-incubating_rules.yaml
+    - /etc/falco/falco-sandbox_rules.yaml

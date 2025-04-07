@@ -1,0 +1,148 @@
+# StorageClass
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage-gitlab
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+
+---
+
+# PV: config
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gitlab-config-pv
+  labels:
+    gitlab-volume: config
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage-gitlab
+  local:
+    path: /srv/gitlab/config
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - debian-12
+
+---
+
+# PV: logs
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gitlab-logs-pv
+  labels:
+    gitlab-volume: logs
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage-gitlab
+  local:
+    path: /srv/gitlab/logs
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - debian-12
+
+---
+
+# PV: data
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gitlab-data-pv
+  labels:
+    gitlab-volume: data
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage-gitlab
+  local:
+    path: /srv/gitlab/data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - debian-12
+
+---
+
+# PVC: config
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitlab-config-pvc
+  namespace: code
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage-gitlab
+  resources:
+    requests:
+      storage: 5Gi
+  selector:
+    matchLabels:
+      gitlab-volume: config
+
+---
+
+# PVC: logs
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitlab-logs-pvc
+  namespace: code
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage-gitlab
+  resources:
+    requests:
+      storage: 5Gi
+  selector:
+    matchLabels:
+      gitlab-volume: logs
+
+---
+
+# PVC: data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitlab-data-pvc
+  namespace: code
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage-gitlab
+  resources:
+    requests:
+      storage: 20Gi
+  selector:
+    matchLabels:
+      gitlab-volume: data

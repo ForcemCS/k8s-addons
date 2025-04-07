@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitlab-config
+  namespace: code
+data:
+  # 类文件键
+  gitlab.rb: |
+    external_url 'http://code.certbot.h.example.cn'
+    git_data_dirs({
+      "default" => {
+        "path" => "/var/opt/gitlab/git-data"
+       },
+      "alternative" => { "path" => "/var/opt/data/gitlab" }
+    })
+    nginx['enable'] = true
+    nginx['listen_port'] = 80
+    nginx['listen_https'] = false
+    nginx['client_max_body_size'] = '2048m'
+    nginx['redirect_http_to_https'] = false
+    prometheus_monitoring['enable'] = false
+    puma['worker_processes'] = 1

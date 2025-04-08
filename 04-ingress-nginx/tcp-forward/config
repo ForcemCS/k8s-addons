@@ -1,0 +1,4 @@
+Host gitlab
+    HostName code.exampme.cn
+    Port 10022
+    User git

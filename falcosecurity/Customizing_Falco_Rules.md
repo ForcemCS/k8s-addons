@@ -136,3 +136,11 @@ Critical Executing binary not part of base image
 Falco 检测到：一个**不属于容器基础镜像的二进制文件被执行了**，这是一个典型的入侵或越权行为检测项，防止在容器中运行未经批准的程序。
 
 上边的事件中有关键字**binary**，可以在[此页面](https://falco.org/docs/reference/rules/default-rules/)搜索相关信息
+
+```
+- rule: Drop and execute new binary in container
+  override:
+    condition: append # 表示追加到现有规则的 condition
+  condition: and not (proc.name=mount and proc.aname[2] startswith runc)
+  # 注意：不再需要顶层的 append: true
+```

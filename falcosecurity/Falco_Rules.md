@@ -55,7 +55,7 @@ Falco 宏（Macros） 允许我们把规则中的条件拆分成 更小、更可
 ```
 #✅ shell_procs`代表 `"proc.name in (bash, sh, zsh)"`
 #✅ 作用：检查进程是否是 Shell（`bash`、`sh`、`zsh`）。
-yaml复制编辑- macro: shell_procs
+- macro: shell_procs
   condition: proc.name in (bash, sh, zsh)
 ```
 

@@ -39,6 +39,8 @@ Falco 通过配置文件（falco.yaml）中的两个主要设置提供可配置�
 
 ### Output Channels
 
+**容器环境特别说明：**当你把 **Falco 运行在容器中**（包括 Kubernetes 中的 Pod），它的日志输出如果是写到标准输出（`stdout`）或者标准错误（`stderr`），那么这些日志不会被 Falco 自己管理，而是会交给容器运行时来处理。
+
 默认情况下，Falco 只激活六个内置输出通道中的两个：stdout 和 syslog。您可以根据需要启用其他通道，所有通道都可以通过 falco.yaml 配置文件进行配置。在该文件中，每个输出通道都有一个启用选项，用于打开或关闭该通道。此外，还可能存在其他选项，用于对单个通道进行专门配置。除了特定通道的设置外，还存在像 json_output 这样的全局选项，可影响多个或所有通道。启用 json_output 后，无论输出通道如何，警报都会强制格式化为 JSON 格式
 
 下面，我们将详细介绍六个不同的输出通道：
@@ -127,6 +129,98 @@ conf复制编辑/var/log/falco/events.log {
 
 #### program_output 
 
+程序输出与文件输出非常相似，但在这种情况下，Falco 会将每个警报的内容写入您在配置文件中指定的程序的标准输入。该输出通道的默认配置为
+
+```
+program_output:  
+  enabled: false  
+  keep_alive: false  
+  program: >  
+    jq '{text: .output}' | curl -d @- -X POST https://hooks.slack.com/services...  
+```
+
+如果 keep_alive 为false，Falco 会为每个警报重新启动程序，并将警报写入标准输入。如果 keep_alive 为 true，Falco 会启动程序一次，，然后不断往它的 stdin 写数据（适合那种能够持续处理输入的程序，比如你自写的 Python 脚本或 Node.js 服务。）
+
+程序字段可让您指定警报的接收程序。Falco 使用 shell 运行该程序，允许使用命令管道进行预处理。该字段的默认值显示了一个将警报发布到 Slack webhook 的好例子。不过，建议为此使用 Falcosidekick
+
 #### http_output
 
+当您需要通过 HTTP(S) 连接发送警报时，最佳选择是使用 HTTP 输出。其默认配置简单明了：
+
+```
+http_output:  http_output：
+  enabled: false
+  url: ht‌tp://some.url  url: http://some.url
+```
+
+启用后，您唯一需要指定的配置就是端点的 URL。Falco 会为每个警报向指定的 URL 发出 HTTP POST 请求。支持未加密 HTTP 和安全 HTTPS 端点。
+
 #### grpc_output
+
+gRPC 输出是最复杂的输出通道。与其他输出通道相比，它可以对警报转发和接收信息的全面粒度进行更多控制。该输出通道通过 Falco 的 gRCP API 向连接的外部程序发送警报。其默认配置为
+
+```
+grpc_output:  grpc_output：
+  enabled: false
+```
+
+该输出通道的完整配置非常复杂。请查阅 [gRPC API 文档](https://falco.org/docs/grpc/#configuration)或者[Falco book](https://www.oreilly.com/library/view/practical-cloud-native/9781098118563/)
+
+### Falcosidekick
+
+[Falcosidekick 项目](https://github.com/falcosecurity/falcosidekick/)提供了将 Falco 与您的生态系统连接起来的完整解决方案。它工作在 Falco 的输出之上，允许您将其通知转发到许多其他目的地。Falcosidekick 可在通知中添加自定义字段，或按优先级过滤事件（以每个目的地为基础）。特别是，[支持的输出](https://github.com/falcosecurity/falcosidekick/#outputs)包括以下平台和应用程序：
+
+- Communication and collaboration
+- Metrics and observability
+- Alerting
+- Logging and storage
+- Function as a Service (FaaS) and serverless
+- Message queues and streaming
+
+<img src="./img/12.png" alt="12" style="zoom:50%;" />
+
+#### Using Falcosidekick
+
+要使用 Falcosidekick，请更新 Falco 的设置以启用 JSON 格式
+
+Falcosidekick 启动后会监听一个 HTTP 端口（默认是 `2801`）。Falco 需要配置为把告警以 JSON 格式 **通过 HTTP POST** 发给这个端口
+
+```
+json_output: true  
+json_include_output_property: true  
+http_output:  
+  enabled: true  
+  url: http://falcosidekick.default.svc.cluster.local:2801
+  #设置 HTTP 请求的 User-Agent 字段，一般可选，但有些服务端可能用于日志或安全控制。
+  user_agent: "falcosecurity/falco"  
+  insecure: true  
+```
+
+#### Falcosidekick 配置
+
+配置是通过 yaml 文件和 env vars 完成的。两者均可使用，但 env vars 优先于文件值。每个 Falcosidekick 输出都有自己的配置设置。有关配置的详细信息，请查阅[文档](https://github.com/falcosecurity/falcosidekick/#yaml-file)。下面的示例使用正确的 Falco 配置将 Falco 和 Falcosidekick 部署在一起
+
+```shell
+helm install falco -n falco falcosecurity/falco \
+  --set falcosidekick.enabled=true \
+  # 添加一个 自定义字段 到每一条 Falco 告警中，字段名是 environment，值是 auto-test
+  --set falcosidekick.config.customfields="environment:auto-test" \
+  --set falcosidekick.config.slack.webhookurl="https://hooks.slack.com/..." \
+  #设置最低告警级别为 critical 才发送到 Slack，只有 critical、error, emergency 等级的才发
+  --set falcosidekick.config.slack.minimumpriority=critical  
+```
+
+#### Falcosidekick-ui
+
+Falcosidekick 还允许您使用一个辅助项目 [Falcosidekick-ui](https://github.com/falcosecurity/falcosidekick-ui)，在一个舒适的网络用户界面上可视化 Falco 事件。网页用户界面会显示检测到的事件的统计数据，并以汇总形式和时间轴显示数值。您还可以筛选自己感兴趣的事件，快速获得所有事件的详细信息。
+
+与 Falcosidekick 一样，你可以直接在主机、容器或 Kubernetes 上运行 Falcosidekick-ui。最简单的方法是在 Kubernetes 上与 Falcosidekick 一起运行。完整的命令如下
+
+```
+helm install falco -n falco falcosecurity/falco \
+  --set falcosidekick.enabled=true \
+--set falcosidekick.enabled=true\
+  --set falcosidekick.webui.enabled=true
+```
+
+注意：Falcosidekick-ui 事件通过 Redisearch 模块（> v2）存储在 Redis 服务器中。如果使用 Helm 部署，会自动配置 Redis。否则（主机或容器），您需要提供 Redis。

@@ -94,9 +94,9 @@ histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seco
 ```
 
 3.网络流量 (Bandwidth)
-nginx_ingress_controller_bytes_sent (Counter) - 发送给客户端的总字节数。
-nginx_ingress_controller_request_size (Histogram/Summary) - 接收到的请求体大小。
-nginx_ingress_controller_response_size (Histogram/Summary) - 发送的响应体大小。
+  nginx_ingress_controller_bytes_sent (Counter) - 发送给客户端的总字节数。
+  nginx_ingress_controller_request_size (Histogram/Summary) - 接收到的请求体大小。
+  nginx_ingress_controller_response_size (Histogram/Summary) - 发送的响应体大小。
 
 PromQL (计算指定游戏服务的出口带宽 - Bytes/sec):
 ```

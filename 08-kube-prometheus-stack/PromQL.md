@@ -76,62 +76,88 @@ container_cpu_usage_seconds_total 计数器类型的指标
    ```
 ## Ingress-Nginx
 1. 请求总数和速率 (Request Rate / QPS)
-每秒钟有多少 HTTP 请求通过 ingress-nginx 到达你的后端服务
-```
-sum(rate(nginx_ingress_controller_requests[1m])) by (path ,host, status)
-```
 
-每秒请求速率(次数)，按路径,域名和响应码分类
+  每秒钟有多少 HTTP 请求通过 ingress-nginx 到达你的后端服务
 
-QPS 突然暴跌可能意味着登录服务故障、支付渠道中断、服务器宕机或玩家大量流失。QPS 异常飙升可能预示着遭受 DDoS 攻击或刷量行为。
+  ```
+  sum(rate(nginx_ingress_controller_requests[1m])) by (path ,host, status)
+  #每秒请求速率(次数)，按路径,域名和响应码分类
+  #QPS 突然暴跌可能意味着登录服务故障、支付渠道中断、服务器宕机或玩家大量流失。QPS 异常飙升可能预示着遭受 DDoS 攻击或刷量行为。
+  ```
 
+2. 请求延迟 (Request Latency - P95/P99)
 
-2.请求延迟 (Request Latency - P95/P99)
-95% 或 99% 的请求从 ingress-nginx 收到到返回响应给客户端所花费的时间。这代表了绝大多数用户的延迟体验。
-Ingress 层面观察到的高延迟，通常暗示着后端 服务处理慢（逻辑复杂、数据库查询慢、锁竞争）、网络传输慢（跨区、网络拥堵）或 Ingress 本身资源不足。它是追踪“卡顿”问题的重要起点。
-```
-histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le, ingress))
-```
+   95% 或 99% 的请求从 ingress-nginx 收到到返回响应给客户端所花费的时间。这代表了绝大多数用户的延迟体验。
 
-3.网络流量 (Bandwidth)
-  nginx_ingress_controller_bytes_sent (Counter) - 发送给客户端的总字节数。
-  nginx_ingress_controller_request_size (Histogram/Summary) - 接收到的请求体大小。
-  nginx_ingress_controller_response_size (Histogram/Summary) - 发送的响应体大小。
+   ```
+   histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le, ingress))
+   #Ingress 层面观察到的高延迟，通常暗示着后端 服务处理慢（逻辑复杂、数据库查询慢、锁竞争）、网络传输慢（跨区、网络拥堵）或 Ingress 本身资源不足。它是追踪“卡顿”问题的重要起点。
+   ```
 
-PromQL (计算指定游戏服务的出口带宽 - Bytes/sec):
-```
-sum(rate(nginx_ingress_controller_bytes_sent{service="<your-game-svc-name>", namespace="<your-game-namespace>"}[5m]))
-```
-识别异常的大响应（如过大的 JSON/HTML）。
-```
-histogram_quantile(0.99, sum(rate(nginx_ingress_controller_response_size_bucket[5m])) by (le, ingress))
-```
+3. 网络流量 (Bandwidth)
 
-计算指定游戏服务的平均响应大小 - Bytes
-```
-sum(rate(nginx_ingress_controller_response_size_sum{service="<your-game-svc-name>", namespace="<your-game-namespace>"}[5m]))
-/
-sum(rate(nginx_ingress_controller_response_size_count{service="<your-game-svc-name>", namespace="<your-game-namespace>"}[5m]))
-```
+   **`nginx_ingress_controller_bytes_sent_sum` (传出/下行带宽 - 服务器到客户端)**
 
-过高的带宽使用可能占满服务器网卡或网络链路，间接导致延迟增加或丢包，影响玩家体验。尤其是在玩家密集区域或进行大规模团战时。
+   - **含义**: 这个指标是一个 **Counter** (计数器)，记录了自 Nginx Ingress Controller 启动以来，通过它**发送给客户端**的总字节数。这通常是你最关心的带宽，因为它代表了游戏服务器向玩家发送游戏状态、资源等数据的量。
 
-4.连接数 (Connections)
-指标: nginx_ingress_controller_connections_active (Gauge) - 当前活动的客户端连接数。
-目的: 了解并发连接水平。游戏服务（尤其是长连接类型）可能会维持大量并发连接。
+     ```
+     sum(
+       rate(nginx_ingress_controller_bytes_sent_sum{namespace = "ingress-nginx",host = "server-hd.dhysr.soletower.com" , ingress= "game-hdh5-server-10001-ingress-10003"}[5m])
+     ) / (1024 * 1024)
+     ```
 
-PromQL (查看指定游戏服务 Ingress Pod 的总活跃连接数):
-```
-sum(nginx_ingress_controller_connections_active{class="nginx", service="<your-game-svc-name>", namespace="<your-game-namespace>"})
-```
+   **`nginx_ingress_controller_request_size_sum` (传入/上行带宽 - 客户端到服务器)**
 
-入口资源消耗: 每个连接都需要消耗 ingress-nginx 的内存和文件句柄资源。过高的连接数可能导致 Ingress Controller 性能下降或崩溃。
-后端压力前兆: Ingress 层的连接数是后端 Skynet 服务需要处理的连接数的前哨。监控它可以预警后端连接池或处理能力的压力。
+   - **含义**: 这个指标也是一个 **Counter**，记录了自 Nginx Ingress Controller 启动以来，从客户端**接收到的请求体**的总字节数。这代表了玩家向游戏服务器发送操作指令等数据的量。对于某些类型的游戏，这个值可能也比较重要，但通常远小于传出带宽。
 
-6.请求转发到后端的延迟
-```
-histogram_quantile(0.95, sum(rate(nginx_ingress_controller_ingress_upstream_latency_seconds_bucket[5m])) by (le, ingress))
-```
+     ```
+     sum by (ingress)(
+       rate(nginx_ingress_controller_request_size_sum{namespace = "ingress-nginx",host = "server-hd.dhysr.soletower.com" , ingress= "game-hdh5-server-10001-ingress-10003"}[5m])
+     ) / (1024 * 1024)
+     ```
+
+4. 连接数 (Connections)
+
+   **`nginx_ingress_controller_nginx_process_connections`**:
+
+   它通过 `state` 标签来区分不同状态的连接：
+
+   - `state="active"`: 当前总的活跃连接数。
+   - `state="reading"`: 正在读取请求头的连接数。
+   - `state="writing"`: 正在写入响应的连接数。
+   - `state="waiting"`: 处于空闲/等待状态的连接数 (Keep-Alive, idle WebSocket)。
+
+   1. **监控总活跃连接数 (跨所有 Pod):**
+
+      ```promql
+      sum(nginx_ingress_controller_nginx_process_connections{state="active", controller_namespace="ingress-nginx", controller_class="k8s.io/game-nginx"})
+      ```
+
+      *(请确保 `controller_namespace` 和 `controller_class` 与你的环境匹配，用于选定正确的 Ingress Controller 实例)*
+
+   2. **监控总等待连接数 (用于推断长连接):**
+
+      ```promql
+      sum(nginx_ingress_controller_nginx_process_connections{state="waiting", controller_namespace="ingress-nginx", controller_class="k8s.io/game-nginx"})
+      ```
+
+   3. **监控等待连接占活跃连接的比例 (用于推断长连接):**
+
+      ```promql
+      sum(nginx_ingress_controller_nginx_process_connections{state="waiting", controller_namespace="ingress-nginx", controller_class="k8s.io/game-nginx"})
+      /
+      sum(nginx_ingress_controller_nginx_process_connections{state="active", controller_namespace="ingress-nginx", controller_class="k8s.io/game-nginx"})
+      ```
+
+      *(如果这个比例很高，说明长连接/空闲连接占比较大)*
+
+   4. **监控连接建立速率 (用于推断长连接):**
+
+      ```promql
+      sum(rate(nginx_ingress_controller_nginx_process_connections_total{state="accepted", controller_namespace="ingress-nginx", controller_class="k8s.io/game-nginx"}[1m]))
+      ```
+
+   5. **推断长连接**: 依然需要通过观察 `state="active"` 的值，并结合 `state="waiting"` 的比例以及 `state="accepted"` 的速率来间接判断长连接的情况。
 
 ## 备注
 

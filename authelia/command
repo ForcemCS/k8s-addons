@@ -1,0 +1,6 @@
+helm -n  authelia   install      authelia  authelia-0.10.6.tgz    -f values.yaml 
+helm -n  authelia   uninstall      authelia 
+
+kubectl create secret generic authelia-db-secret \
+  -n authelia \
+  --from-literal=password='authelia'

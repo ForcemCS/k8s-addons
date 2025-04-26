@@ -1,0 +1,70 @@
+# --- Service ---
+service:
+  type: 'ClusterIP'
+  port: 9091 # 使用 Authelia 端口
+pod:
+  kind: 'Deployment' # 建议使用 Deployment
+  replicas: 1
+
+  extraVolumes:
+    # 挂载包含 users_database.yml 的 ConfigMap
+    - name: user-config-vol
+      configMap:
+        name: authelia-user-database # <--- 你的包含 users_database.yml 的 ConfigMap 名称
+        items:
+          - key: users_database.yml
+            path: users_database.yml
+
+  extraVolumeMounts:
+    # 将 users_database.yml 挂载到 /config (emptyDir) 目录
+    - name: user-config-vol
+      mountPath: "/config/users_database.yml"
+      subPath: users_database.yml
+      readOnly: true
+
+configMap:
+  server: { host: 0.0.0.0, port: 9091 }
+  log: { level: 'info' }
+
+  session:
+    name: 'authelia_session'
+    expiration: '1 hour'
+    inactivity: '30 minutes'
+    cookies:
+    - domain: example.xom
+      subdomain: op 
+      authelia_url: 'https://op.example.xom'
+    redis:
+      enabled: true
+      deploy: true
+      host: 'authelia-redis-master.authelia.svc.cluster.local'
+  storage:
+    postgres:
+      enabled: true
+      deploy: true
+      address: 'authelia-postgresql.authelia.svc.cluster.local:5432'
+      username: authelia
+      database: authelia
+      password:
+        disabled: false
+        value: authelia
+  authentication_backend:
+    file:
+      enabled: true 
+      path: '/config/users_database.yml'
+      password:
+        algorithm: 'argon2id'
+        argon2: { variant: 'argon2id', iterations: 3, memory: 65536, parallelism: 4, key_length: 32, salt_length: 16 }
+
+  # --- Access Control 配置 ---
+  access_control:
+    default_policy: 'deny' 
+    rules: # <--- 你的规则
+      - { domain: "*.example.xom", policy: two_factor }
+
+  # --- Notifier 配置 ---
+  notifier:
+    smtp: { enabled: false }
+    filesystem:
+      enabled: true # <--- 启用文件系统通知器
+      filename: '/config/notifications.log' # 指向 emptyDir

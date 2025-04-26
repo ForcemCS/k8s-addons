@@ -1,0 +1,16 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: authelia
+  namespace: authelia
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`op.example.xom`)
+      kind: Rule
+      services:
+        - name: authelia
+          port: 9091
+  tls:
+    secretName: auth-tls

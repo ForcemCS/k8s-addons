@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tool
+  namespace: hdh5
+spec:
+  replicas: 1  # 副本数量
+  selector:
+    matchLabels:
+      app: merge-tool
+  template:
+    metadata:
+      labels:
+        app: merge-tool
+    spec:
+      containers:
+      - name: merge-tool-container
+        image: cr.example.xom/autonew:v40 # 替换为你的镜像
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/uploads # 挂载到容器内的 uploads 目录
+      volumes: # 定义卷
+      - name: app-data
+        emptyDir: {} # 使用 emptyDir 提供简单的临时存储 (Pod 生命周期)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tool-service
+  namespace: hdh5
+spec:
+  selector:
+    app: merge-tool
+  ports:
+  - protocol: TCP
+    port: 80  # Service 端口
+    targetPort: 8080  # Pod 端口
+  type: NodePort  # 使用 LoadBalancer 类型对外暴露服务 (适用于云环境)
+---
+apiVersion: 'traefik.containo.us/v1alpha1'
+kind: 'Middleware'
+metadata:
+  name: 'forwardauth-authelia' 
+  namespace: 'hdh5' 
+  labels:
+    app.kubernetes.io/instance: 'authelia'
+    app.kubernetes.io/name: 'authelia'
+spec:
+  forwardAuth:
+    address: 'http://authelia.authelia.svc.cluster.local:9091/api/authz/forward-auth'
+    authResponseHeaders:
+      - 'Remote-User'
+      - 'Remote-Groups'
+      - 'Remote-Email'
+      - 'Remote-Name'
+---
+apiVersion: 'networking.k8s.io/v1'
+kind: 'Ingress'
+metadata:
+  name: 'app'
+  namespace: 'hdh5'
+  annotations:
+    traefik.ingress.kubernetes.io/router.entryPoints: 'websecure' # name of your https entry point (default is 'websecure')
+    traefik.ingress.kubernetes.io/router.middlewares: 'hdh5-forwardauth-authelia@kubernetescrd' # name of your middleware, as defined in your middleware.yml
+    traefik.ingress.kubernetes.io/router.tls: 'true'
+spec:
+  rules:
+    - host: 'link.example.xom'
+      http:
+        paths:
+          - path: '/'
+            pathType: 'Prefix'
+            backend:
+              service:
+                name:  tool-service
+                port:
+                  number: 80
+  tls:
+  - hosts:
+    - link.example.xom
+    secretName: link-tls

@@ -1,9 +1,9 @@
 # --- Service ---
 service:
   type: 'ClusterIP'
-  port: 9091 # 使用 Authelia 端口
+  port: 9091
 pod:
-  kind: 'Deployment' # 建议使用 Deployment
+  kind: 'Deployment' 
   replicas: 1
 
   extraVolumes:
@@ -59,12 +59,12 @@ configMap:
   # --- Access Control 配置 ---
   access_control:
     default_policy: 'deny' 
-    rules: # <--- 你的规则
+    rules: 
       - { domain: "*.example.xom", policy: two_factor }
 
   # --- Notifier 配置 ---
   notifier:
     smtp: { enabled: false }
     filesystem:
-      enabled: true # <--- 启用文件系统通知器
+      enabled: true 
       filename: '/config/notifications.log' # 指向 emptyDir

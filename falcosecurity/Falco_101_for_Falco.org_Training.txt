@@ -1,0 +1,98 @@
+1.设置软件包仓库
+curl -s https://falco.org/repo/falcosecurity-packages.asc | apt-key add -
+echo "deb https://download.falco.org/packages/deb stable main" \ | tee -a /etc/apt/sources.list.d/falcosecurity.list
+apt-get update
+
+2.安装内核头文件
+Falco 需要一个驱动程序（内核模块或 eBPF 探针）才能工作。如果您的发行版/内核没有预编译的驱动程序，Falco 需要在主机上安装内核头文件，以便即时编译驱动程序。
+
+1）检查是否安装了内核头文件
+apt search linux-headers-$(uname -r)
+2）安装内核头文件
+apt-get -y install linux-headers-$(uname -r)
+
+3.安装falco
+apt-get install -y falco=0.37.0
+
+4.安装falco驱动程序
+falcoctl driver install
+
+
+
+root@kubernetes-vm:~# cat my_rules.yaml 
+customRules:
+  my_rules: |-
+    #覆盖默认规则集的list
+    - list: sensitive_directory_names
+      items: [/, /etc, /etc/, /root, /root/, /mnt]
+    - list: forbidden_processes
+      items: [mount, sudo, su]
+    - macro: mount_process
+      condition: proc.name in (forbidden_processes)
+    - rule: Unauthorized mount process
+      desc: Detects the execution of any mount process
+      condition: evt.type=execve and mount_process
+      output: "Unauthorized mount process executed (user=%user.name command=%proc.cmdline pid=%proc.pid container_id=%container.id container_name=%container.name image=%container.image)"
+      priority: warning
+      tags: [process, mount]
+	  
+falcoctl:
+  config:
+    indexes:
+    - name: falcosecurity
+      url: https://falcosecurity.github.io/falcoctl/index.yaml
+    artifact:
+      install:
+        refs:
+          - falco-rules
+          - falco-incubating-rules
+          - falco-sandbox-rules
+		  
+falco:
+  rules_files:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco-incubating_rules.yaml
+    - /etc/falco/falco-sandbox_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/rules.d		  
+
+	
+root@kubernetes-vm:~# helm upgrade falco falcosecurity/falco -n falco --reuse-values --version 4.8.3 -f my_rules.yaml
+
+
+
+
+
+FALCO_POD=$(kubectl get pods -n falco | sed -n -e 's/^\(falco-[[:alnum:]]*\).*/\1/p')
+kubectl exec ${FALCO_POD} -n falco -- falco -L
+
+
+自 Falco 0.36 版起，默认规则根据成熟度框架模型被分成四个不同的文件：稳定文件、孵化文件、沙盒文件和废弃文件。
+
+falcoctl 是一个命令行界面（CLI）工具，旨在通过命令行界面管理 Falco 规则和插件。换句话说， falcoctl 可以帮助下载、安装和更新规则和插件。
+
+孵化规则、沙箱规则和废弃规则默认不随 Falco 一起提供，需要安装。请使用 Falcoctl 管理规则。阅读本博文https://falco.org/blog/falcoctl-install-manage-rules-plugins/，了解有关 falcoctl 的更多信息。
+
+使用 Helm 时，请使用 falcoctl 值安装规则文件。默认情况下，它会安装稳定规则。使用以下配置创建名为 values.yaml 的新文件，以安装孵化规则和沙盒规则。(请注意，如果不指定默认规则，它们将不可用）。
+
+falcoctl:
+  config:
+    indexes:
+    - name: falcosecurity
+      url: https://falcosecurity.github.io/falcoctl/index.yaml
+    artifact:
+      install:
+        refs:
+          - falco-rules
+          - falco-incubating-rules
+          - falco-sandbox-rules
+		  
+要启用这些规则，需要在 rules_files Falco 配置中添加相应的路径。在 values.yaml 文件中添加以下配置：
+
+falco:
+  rules_files:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco-incubating_rules.yaml
+    - /etc/falco/falco-sandbox_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/rules.d

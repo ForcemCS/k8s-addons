@@ -59,8 +59,8 @@ Address = 192.168.0.4/32
 
 [Peer]
 PublicKey = serrverxxxx
-Endpoint = 118.242.18.133:51820
-AllowedIPs = 192.168.0.0/24,10.10.0.0/16
+Endpoint = <公网xxx>:51820
+AllowedIPs = 192.168.0.0/24,12.12.0.0/16
 PersistentKeepalive = 25 # 建议开启，用于维持 NAT 映射，避免连接被家庭路由器超时断开
 ```
 

@@ -1,0 +1,149 @@
+{{ $global := . }}
+{{- $data   := .Files.Get "servers.yaml" | fromYaml }}
+{{- range $counts := $data.server }}
+{{- if eq ( int $counts.shutdown ) 0 }}
+{{- if and ( eq ( int $counts.parent ) 0 ) ( not (hasKey $.Values.forwardServer ( $counts.id | toString )) ) }}
+{{- $main   := "main_logic"  }}
+{{- $gl := "global_logic"  }}
+{{- $log    := "main_log_logic"  }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "roh5server.fullname" $global }}-{{ $counts.id    }}
+  namespace: {{ $global.Values.namespace }}
+  labels:
+    {{- include "roh5server.labels" $global | nindent 4 }}-{{ $counts.id   }}
+spec:
+  replicas: {{ $global.Values.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "roh5server.selectorLabels" $global | nindent 6 }}-{{ $counts.id   }}
+      game-svc: "game-svc-{{ $counts.id  }}"
+      #sid: {{ $counts.id  |quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "roh5server.selectorLabels" $global | nindent 8 }}-{{ $counts.id  }}
+        game-svc: "game-svc-{{ $counts.id   }}"
+        #sid: {{ $counts.id  |quote }}
+      annotations:
+        #consul.hashicorp.com/connect-inject: 'true'
+        #consul.hashicorp.com/service-meta-sid: {{ $counts.id |quote }}
+        #consul.hashicorp.com/connect-service-port: '10003'
+    spec:
+      #serviceAccountName: {{ include "roh5server.fullname" $global }}-svc-{{ $counts.id   }}
+      #imagePullSecrets:
+      #- name: auth-registry-secret
+      initContainers:
+      - image: cr.h.xxxxxxx.cn/busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          sysctl -w net.core.somaxconn=65535
+          sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+          sysctl -w net.ipv4.tcp_tw_reuse=1
+          sysctl -w fs.file-max=1048576
+        imagePullPolicy: Always
+        name: setsysctl
+        securityContext:
+          privileged: true
+      containers:
+      - name: {{ $global.Chart.Name }}
+        image: "{{ $counts.repo }}/{{ $counts.image }}:{{ $counts.tag }}"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SID
+          value: {{ $counts.id  | quote }}
+        - name: TZ
+          value: {{ $.Values.timezone |quote }}
+        {{- if eq (int $counts.runtype) 0 }}
+        - name: start
+          value: {{ $main  |quote }}
+        {{- else if eq ( int $counts.runtype ) 1 }}
+        - name: start
+          value: {{ $gl  |quote }}
+        {{- else }}
+        - name: start
+          value: {{ $log  |quote }}
+        {{- end }}
+        - name: thread
+          value: {{ $counts.thread  |quote}}
+        - name: MAXRPCAGENT
+          value: {{ $counts.agent |quote}}
+        - name: open_gm
+          value: {{ $counts.gm  |quote }}
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 2000Mi
+          requests:
+            cpu: 200m
+            memory: 300Mi
+        ports:
+        - containerPort: 10003
+          name: server1
+          protocol: TCP
+        - containerPort: 10002
+          name: server2
+          protocol: TCP
+        - containerPort: 10004
+          name: server3
+          protocol: TCP
+        - containerPort: 10007
+          name: server4
+          protocol: TCP
+        - containerPort: 10010
+          name: server5
+          protocol: TCP
+      {{- if or (eq (int $counts.runtype) 0) (eq (int $counts.runtype) 1) }}
+        volumeMounts:
+        - name: game-log
+          mountPath: "/usr/data/svr/log/main_logic" 
+        - name: config
+          mountPath: "/usr/data/svr/main_logic_real"
+          subPath: main_logic_real
+          readOnly: false
+      volumes:
+      - name: game-log
+        hostPath:
+          # Ensure the file directory is created.
+          path: /var/local/game-log-{{ $counts.id    }}
+          type: DirectoryOrCreate
+      - name: config
+        configMap:
+          # 提供你想要挂载的 ConfigMap 的名字
+          name: roh5server-cm-main
+          #defaultMode: 0777 
+          # 来自 ConfigMap 的一组键，将被创建为文件
+          items:
+          - key: "main_logic_real"
+            path: "main_logic_real"
+      {{- else }} 
+        volumeMounts:
+        - name: config
+          mountPath: "/usr/data/svr/main_logic_real"
+          subPath: main_logic_real
+          readOnly: false
+      volumes:
+      - name: config
+        configMap:
+          # 提供你想要挂载的 ConfigMap 的名字
+          name: ro3log-cm
+          #defaultMode: 0777 
+          # 来自 ConfigMap 的一组键，将被创建为文件
+          items:
+          - key: "main_logic_real"
+            path: "main_logic_real"
+      {{- end }} 
+{{- end }}
+---
+{{- else }}
+{{- end }}
+{{- end }}

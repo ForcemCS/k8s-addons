@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: consul-pv-0
+  labels:
+    type: local
+spec:
+  storageClassName: default
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/root/hashicorp/consul/data-0"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: consul-pv-1
+  labels:
+    type: local
+spec:
+  storageClassName: default
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/root/hashicorp/consul/data-1"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: consul-pv-2
+  labels:
+    type: local
+spec:
+  storageClassName: default
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/root/hashicorp/consul/data-2"
+

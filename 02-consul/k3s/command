@@ -1,0 +1,3 @@
+helm -n  consul  upgrade --install consul hashicorp/consul -f values.yaml
+
+kubectl get --namespace consul secrets/consul-bootstrap-acl-token --template={{.data.token}} | base64 -d

@@ -33,6 +33,9 @@ loki:
       secretAccessKey: xxxx
       region: ap-shanghai
 deploymentMode: SimpleScalable
+#调整默认的资源限制
+#chunksCache:
+#  allocatedMemory: 2048
 backend:
   replicas: 2
 read:
@@ -44,8 +47,9 @@ read:
     requests:
       cpu: 50m
       memory: 100Mi
+#https://grafana.com/docs/loki/latest/get-started/components/
 write:
-  replicas: 2
+  replicas: 3
 # 默认情况下，该图表会部署一个 Nginx 容器作为网关，处理流量路由
 # 使用 HTTP 基本身份验证限制对Loki访问
 # 但是我们也可以置为false,使用K8S集群的ingress

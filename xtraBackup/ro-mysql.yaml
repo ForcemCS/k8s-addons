@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ro-mysql
+  namespace: xtrabackup
+spec:
+  type: NodePort
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
+    nodePort: 30096
+  selector:
+    app: ro-mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ro-mysql
+  namespace: xtrabackup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ro-mysql
+  template:
+    metadata:
+      labels:
+        app: ro-mysql
+    spec:
+      containers:
+      - image: mysql:5.7
+        name: ro-mysql
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: 'com.012'
+        - name: TZ
+          value: 'Asia/Shanghai'
+        ports:
+        - containerPort: 3306
+          name: ro-mysql
+        volumeMounts:
+        - name: xtrabackup-ro-mysql-pv
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: xtrabackup-ro-mysql-pv 
+        persistentVolumeClaim:
+          claimName: xtrabackup-ro-mysql-pvc
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: xtrabackup-ro-mysql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: xtrabackup
+  capacity:
+    storage: 150Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/root/xtraBackup/prod-ro"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: xtrabackup-ro-mysql-pvc
+  namespace: xtrabackup
+spec:
+  storageClassName: xtrabackup
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 150Gi

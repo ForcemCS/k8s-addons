@@ -1,0 +1,21 @@
+{{ $global := . }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ro3micro.fullname" $global }}-svc
+  namespace: {{ $.Values.namespace }}
+  labels:
+    {{- include "ro3micro.labels" $global | nindent 4 }}
+    game-svc: "game-svc-{{ $global.Chart.Name }}"
+spec:
+  clusterIP: {{ $global.Values.service.ipaddr }}
+  type: {{ $global.Values.service.type }}
+  ports:
+  - name: "game-svc-1"
+    port: 18000
+    protocol: TCP
+    targetPort: 18000
+  selector:
+    {{- include "ro3micro.selectorLabels" $global | nindent 4 }}
+    game-svc: "game-svc-{{ $global.Chart.Name }}"
+

@@ -1,0 +1,9 @@
+apiVersion: v2
+appVersion: v1
+description: ro3-micro在tke集群下的v1版
+maintainers:
+- email: kuiinative@gmail.com
+  name: wukui
+name: ro3-micro
+type: application
+version: v1

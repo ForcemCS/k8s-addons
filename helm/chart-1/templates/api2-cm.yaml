@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ro3-api2-cm
+  namespace: {{ $.Values.namespace }}
+data:
+  # 类文件键
+  ro3-api.yaml: |
+    Name: ro3-api
+    Host: 0.0.0.0
+    Port: 8888
+
+    mysql:
+      user: root
+      pass: xxxxxx
+      host: xxxxxx
+      port: 30016
+        
+    goods_conf: "etc/Goods.xlsx"
+
+    server:
+      api_url: http://game-roh5-server-svc-$<SID>.{{ $.Values.namespace }}.svc.cluster.local:10004
+
+   

@@ -1,0 +1,22 @@
+# 构建package时忽略的Patterns 。
+# 这支持 shell glob 匹配、相对路径匹配和否定（前缀为 !） 每行只能有一个模式。
+.DS_Store
+# Common VCS dirs
+.git/
+.gitignore
+.bzr/
+.bzrignore
+.hg/
+.hgignore
+.svn/
+# Common backup files
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+# Various IDEs
+.project
+.idea/
+*.tmproj
+.vscode/

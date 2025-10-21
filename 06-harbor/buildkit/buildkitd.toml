@@ -1,0 +1,6 @@
+debug = true
+[registry."docker.io"]
+  mirrors = ["https://docker.m.daocloud.io"]
+
+[registry."example.com"]
+  http = false

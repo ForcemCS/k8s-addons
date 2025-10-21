@@ -1,0 +1,4 @@
+docker buildx create --use --bootstrap \
+  --name mybuilder \
+  --driver docker-container \
+  --buildkitd-config /etc/buildkitd.toml

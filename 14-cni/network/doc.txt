@@ -1,0 +1,4 @@
+节点(CVM)绑定弹性网卡(ENI)，每一个绑定到 CVM 上的 ENI，又可以关联多个内网 IP 地址。这些 IP 地址都来自于你为集群指定的 VPC 子网。
+TKE 运行在每个节点上的网络组件（一个 DaemonSet）会管理这些额外绑定上来的 ENI 和它们上面的所有 IP 地址。
+这些 IP 地址共同构成了该节点可供 Pod 分配的 “IP 地址池”。
+这个池子里的每一个 IP，在 Kubernetes 的资源模型里，就被抽象为了一个 tke.cloud.tencent.com/eni-ip 资源

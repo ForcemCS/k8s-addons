@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example-pod
+spec:
+  restartPolicy: OnFailure
+  initContainers:
+  #启动 -> 执行 sleep 5 -> 退出 (Exit 0)。
+  # 必须等它完全结束，下一步才会开始。
+  - name: ic1
+    image: alpine:3
+    command: [ "sh", "-c", "sleep 5" ]
+  #启动 -> 执行 sleep 20 -> 失败退出 (Exit 1) -> 自动重启。
+  #关键点来了！ 因为它没有配置 startupProbe，K8s 只要把它拉起来，认为它“Started”了，就会立即去启动下一个容器，不会等待它运行结束（它设计上就是跑不完的）。
+  #sc1 会在后台一直运行（并在失败后重启），此时流程已经往下走了。
+  - name: sc1
+    restartPolicy: Always
+    image: alpine:3
+    command: [ "sh", "-c", "sleep 20 && exit 1" ]
+  #在 sc1 启动后几乎立刻启动。执行 sleep 5 -> 退出 (Exit 0)。
+  #必须等它完全结束。才能进行下一个
+  #此时，后台的 sc1 可能还在 sleep 20 的过程中。
+  - name: ic2
+    image: alpine:3
+    command: [ "sh", "-c", "sleep 5" ]
+  #启动 -> 执行死循环 while true。
+  #这里有变化！ 因为配置了 startupProbe，K8s 不会立刻往下走。它会等待 startupProbe 检测成功（执行 sleep 5 成功）。只有探针成功了，K8s 才认为这个 Sidecar 准备好了，才会继续。
+  - name: sc2
+    restartPolicy: Always
+    image: alpine:3
+    command: [ "sh", "-c", "while true; do sleep 1; done" ]
+    startupProbe:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 5"]
+      initialDelaySeconds: 0
+      timeoutSeconds: 999
+    readinessProbe:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 5"]
+      initialDelaySeconds: 0
+      timeoutSeconds: 999
+  #Start rc1 & rc2 (普通应用容器):
+  #  行为： 所有的 Init 容器（ic1, ic2）都结束了，所有的 Sidecar 容器（sc1, sc2）都已启动并就绪了。
+  #  结果： rc1 和 rc2 开始并行启动。
+  containers:
+  - name: rc1
+    image: alpine:3
+    command: [ "sh", "-c", "sleep 55" ]
+    startupProbe:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 5"]
+      initialDelaySeconds: 0
+      periodSeconds: 30
+      timeoutSeconds: 999
+    readinessProbe:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 5"]
+      initialDelaySeconds: 0
+      periodSeconds: 30
+      timeoutSeconds: 999
+  - name: rc2
+    image: alpine:3
+    command: [ "sh", "-c", "sleep 60" ]
+    startupProbe:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 5"]
+      initialDelaySeconds: 0
+      periodSeconds: 30
+      timeoutSeconds: 999
+    readinessProbe:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 5"]
+      initialDelaySeconds: 0
+      periodSeconds: 30
+      timeoutSeconds: 999
+
+[ic1 (5s)] -> 完成
+              |
+              +-> [sc1 (一直跑)] -> (无探针，不阻塞后续)
+              |
+              +-> [ic2 (5s)] -> 完成
+                                |
+                                +-> [sc2 (一直跑)] -> (有探针，阻塞直到探针OK)
+                                                      |
+                                                      +-> [rc1] & [rc2] 同时启动

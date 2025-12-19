@@ -1,0 +1,31 @@
+./duckdb poli_analysis.db
+
+SET secret_directory = 'C:\Users\ForceCS\Desktop\go_project\go_basic\duckdb';
+
+CREATE PERSISTENT SECRET secret_ro (
+    TYPE MYSQL,
+    HOST 'xxxxxx',
+    USER 'readonly',
+    PASSWORD 'xxxxxxxxx',
+    PORT 20269
+);
+
+SELECT * FROM duckdb_secrets();
+
+
+DROP PERSISTENT SECRET secret_ro;
+
+
+ATTACH '' AS ro_prod_new (TYPE mysql, SECRET secret_ro);
+
+---------------
+CREATE TABLE item_log_2025_12_17 AS  SELECT * FROM ro_prod_new.db_ro3_operation_log."item_log_2025-12-17";
+
+CREATE TABLE snap_role AS  SELECT * FROM ro_prod_new.db_ro3_operation_log.SNAP_ROLE;
+
+CREATE TABLE poli_island_log AS SELECT * FROM ro_prod_new.db_ro3_operation_log.poli_island_log;
+
+CREATE TABLE t_order AS SELECT * FROM ro_prod_new.db_ro3_sdk2.T_ORDER;
+
+
+db_ro3_operation_log.item_log_2025-12-17, db_ro3_operation_log.SNAP_ROLE, db_ro3_operation_log.poli_island_log,db_ro3_sdk2.T_ORDER

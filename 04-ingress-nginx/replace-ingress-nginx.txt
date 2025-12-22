@@ -1,3 +1,4 @@
 ```
 https://blog.nginx.org/blog/the-ingress-nginx-alternative-open-source-nginx-ingress-controller-for-the-long-term
+https://docs.nginx.com/
 ```

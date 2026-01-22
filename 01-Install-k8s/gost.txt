@@ -1,0 +1,55 @@
+[Unit]
+Description=KCPTun Server Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+# 注意：这里 -t 指向你 gost 的端口
+ExecStart=/usr/local/bin/kcptun-server -t "127.0.0.1:23766" -l ":4000" -mode fast3 -nocomp -sockbuf 16777217 -dscp 46
+Restart=always
+RestartSec=5
+
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+
+[Unit]
+Description=KCPTun Client Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+
+ExecStart=/usr/local/bin/kcptun-client -r "<外网>:4000" -l ":8388" -mode fast3 -nocomp -autoexpire 900 -sockbuf 16777217 -dscp 46
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+root@VM-0-2-ubuntu:~# cat /etc/systemd/system/gost.service 
+[Unit]
+Description=Gost Proxy Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/gost -L :23766
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+

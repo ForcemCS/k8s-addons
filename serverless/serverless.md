@@ -71,7 +71,7 @@ Kubernetes 中工作负载的最小基本单元是 Pod，它可以由一个或�
 
 对于某些企业客户而言，256MB 的功能映像、5 分钟的最大调用时长和 2GB 的最大内存容量限制过大，无法满足他们的需求。此外，Serverless 1.0 也无法支持微服务架构，而许多公司都在使用微服务。
 
-<img src="C:\Users\ForceCS\Desktop\serverless\img\1.png" alt="1" style="zoom:50%;" />
+<img src="./img/1.png" alt="1" style="zoom:50%;" />
 
 Serverless 2.0 工作负载比 1.0 版本更具可移植性。无服务器2.0的定义如下：
 

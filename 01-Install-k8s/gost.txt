@@ -52,4 +52,7 @@ RestartSec=5
 WantedBy=multi-user.target
 
 
-
+nc -vuz xxx  4000
+  -v (Verbose): 详细输出模式。它会告诉你连接是成功了还是失败了，而不是沉默。
+  -u (UDP): 最关键的参数。因为你的 kcptun 走的是 UDP 协议，如果不加这个参数，nc 默认会去测 TCP 端口。
+  -z (Zero-I/O): 扫描模式。告诉 nc 只要连接上就行，不需要发送任何实际数据。

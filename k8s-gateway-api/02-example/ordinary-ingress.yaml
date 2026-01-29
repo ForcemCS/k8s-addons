@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  annotations:
+    some-ingress-controller.example.org/tls-redirect: "True"
+spec:
+  ingressClassName: prod
+  tls:
+  - hosts:
+    - foo.example.com
+    - bar.example.com
+    secretName: example-com
+  rules:
+  - host: foo.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: foo-app
+            port:
+              number: 80
+      - path: /orders
+        pathType: Prefix
+        backend:
+          service:
+            name: foo-orders-app
+            port:
+              number: 80
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bar-app
+            port:
+              number: 80

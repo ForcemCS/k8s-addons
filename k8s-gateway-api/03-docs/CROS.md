@@ -70,3 +70,28 @@
 
 - **初学者/简单场景：** 用 `HTTPCORSFilter` 挂在 `HTTPRoute` 上，简单省事。
 - **复杂场景/公司级规范：** 用 `SecurityPolicy`，可以在一个地方管住整个网关的跨域规则，更专业也更安全。
+
+## 示例
+```
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: cors-example
+spec:
+  # 精准作用到这个服务
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  cors:
+    #指定哪些网站可以跨域调用你的 API。
+    allowOrigins:
+        - "http://*.foo.com"
+        allowMethods:
+        - GET
+        - POST
+        allowHeaders:
+        - "Authorization"    # 允许前端发送登录 Token
+        - "Content-Type"     # 允许前端发送 JSON 数据
+        exposeHeaders:
+```

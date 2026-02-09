@@ -1,9 +1,19 @@
+# In-tree Issuer
+
+In-tree issuer 就是 cert-manager 官方代码库里原生支持、安装完就能直接用的签发机构。
+
 ## ACME
 
 + ACME Issuer 和 ACME 协议
 
   - **ACME (Automated Certificate Management Environment):** 这是一种协议，用于自动化证书颁发机构 (CA) 与用户（通常是网站或服务的管理员）之间的证书申请、验证和颁发过程。它由 Let's Encrypt 等机构推广，旨在简化 SSL/TLS 证书的管理，让 HTTPS 更加普及。
+
   - **ACME Issuer:** 在 cert-manager 中，`ACME Issuer` 是一种资源类型。它代表你在某个支持 ACME 协议的 CA 服务器上的一个账户。当你创建一个 `ACME Issuer` 时，cert-manager 会为你生成一个私钥，这个私钥用于你在该 CA 服务器上的身份识别。 你可以把它想象成你在 Let's Encrypt 上的一个账号。
+
+    当你创建一个 ACME 类型的 `Issuer` 时，你本质上是在 **“注册账号”**：
+
+    - **Issuer 是你的身份**：它代表你在证书颁发机构（如 Let's Encrypt）那里的一个登记身份。
+    - **私钥 (Private Key) 就是身份证**：`cert-manager` 会自动为你生成一个私钥并存入 Secret。每次你向 Let's Encrypt 申请证书时，`cert-manager` 都会用这个私钥进行数字签名，证明“这就是那个注册过的用户在说话”。
 
   - **cert-manager**: 是一个 Kubernetes 的插件，用来自动化管理和颁发来自各种来源的 TLS 证书，这里它支持ACME协议，可以和 Let's Encrypt 等 CA 集成。
 

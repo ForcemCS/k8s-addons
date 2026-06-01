@@ -1,0 +1,14 @@
+apiVersion: traefik.containo.us/v1alpha1 
+kind: Middleware
+metadata:
+  name: my-ip-whitelist
+  namespace: default
+spec:
+  ipWhiteList:
+    sourceRange:
+      - "x1/32"
+      - "x2/32"
+
+
+
+# traefik.ingress.kubernetes.io/router.middlewares: default-my-ip-whitelist@kubernetescrd

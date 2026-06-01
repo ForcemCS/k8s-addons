@@ -1,0 +1,87 @@
+alertmanager:
+  config:
+    global:
+      resolve_timeout: 3m
+  alertmanagerSpec:
+    alertmanagerConfigMatcherStrategy:
+      type: OnNamespace
+
+kubeControllerManager:
+  enabled: false        
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false    
+
+#defaultRules:
+#  create: true
+#  rules:
+#    # 云环境下可以关闭
+#    kubeControllerManager: false
+#    kubeSchedulerAlerting: false
+#    kubeSchedulerRecording: false
+#    etcd: false
+#    kubeProxy: false
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
+
+
+    # --- Retention -----------------------------------------------------------
+    retention: 7d             
+    retentionSize: "15GB"       #表示本地数据块占用的磁盘最多 45GB,达到上限就开始删最老的数据
+    scrapeInterval: 30s         #表示 Prometheus 每 30 秒去各个目标(target)拉一次指标
+    evaluationInterval: 30s     #表示 Prometheus 每 30 秒评估一次告警规则和记录规则
+    replicas: 1
+    externalLabels:
+      cluster: k8s-dev-cluster
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: prometheus
+            topologyKey: kubernetes.io/hostname
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-prom-stack
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi  
+    resources:
+      requests:
+        cpu: 300m
+        memory: 1Gi
+      limits:
+        memory: 8Gi
+  route:
+    main:
+      enabled: true
+      apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      annotations: {}
+      labels: {}
+      hostnames:
+      - prom.monitoring.com
+      parentRefs:
+      - name: prom-eg
+      httpsRedirect: false
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters: []
+      sessionPersistence: {}
+      additionalRules: []
+
+# helm  -n  monitoring    upgrade      prom prometheus-community/kube-prometheus-stack --version 86.1.0 -f  values.yaml

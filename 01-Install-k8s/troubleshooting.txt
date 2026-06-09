@@ -1,0 +1,8 @@
+
+troubleshooting Applications   https://kubernetes.io/docs/tasks/debug/debug-application/
+
+Troubleshooting Clusters       https://kubernetes.io/docs/tasks/debug/debug-cluster/
+
+Debugging Pods     https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/
+
+Debugging Services https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/

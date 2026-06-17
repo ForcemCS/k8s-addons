@@ -1,0 +1,97 @@
+# =============================================================================
+# skynet-alert-relay 部署清单(白名单热加载版)
+# 告警白名单放在 ConfigMap relay-alert-instances 里,改完无需重启 Pod。
+# 注意:
+#   - replicas 必须为 1(去重/冷却是内存态,多副本会失效)
+#   - ConfigMap 必须整目录挂载(不能用 subPath),否则文件不会自动更新
+#   - 改 ConfigMap 后,因 kubelet 同步 + relay 重读,生效有约 1~2 分钟延迟
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wechat-alert-webhook
+  namespace: monitoring
+type: Opaque
+stringData:
+  # 企业微信群 -> 添加群机器人 -> 复制 Webhook 地址,粘贴到这里
+  url: "xxx"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: relay-alert-instances
+  namespace: monitoring
+data:
+  # 要告警的 instance,一行一个(也可逗号分隔)。留空 = 所有区服都告警。
+  # 改这里 -> kubectl apply / edit -> 约 1~2 分钟内自动生效,无需重启 Pod。
+  instances: |
+    game-999999
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skynet-alert-relay
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: skynet-alert-relay
+  template:
+    metadata:
+      labels:
+        app: skynet-alert-relay
+    spec:
+      imagePullSecrets:
+      - name: auth-registry-secret
+      containers:
+        - name: relay
+          image: aaa:v2
+          ports:
+            - containerPort: 8080
+          env:
+            - name: WECHAT_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: wechat-alert-webhook
+                  key: url
+            - name: ALERT_INSTANCES_FILE   # 从挂载的 ConfigMap 文件读白名单
+              value: /etc/relay/instances
+            - name: RELOAD_SECONDS         # 多久重读一次白名单文件
+              value: "15"
+            - name: COOLDOWN_SECONDS       # 同一服务多久内最多告警一次
+              value: "300"
+            - name: MAX_CONTENT_BYTES      # 单条消息正文字节上限
+              value: "1500"
+          volumeMounts:
+            - name: allowlist
+              mountPath: /etc/relay      # 整目录挂载,文件会随 ConfigMap 自动更新
+              readOnly: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+      volumes:
+        - name: allowlist
+          configMap:
+            name: relay-alert-instances
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: skynet-alert-relay
+  namespace: monitoring
+spec:
+  selector:
+    app: skynet-alert-relay
+  ports:
+    - port: 8080
+      targetPort: 8080

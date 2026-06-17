@@ -1,0 +1,93 @@
+kind: DaemonSet
+rbac:
+  create: true
+
+env:
+  - name: LOKI_USER
+    valueFrom:
+      secretKeyRef:
+        name: loki-gateway-basic-auth
+        key: username
+  - name: LOKI_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: loki-gateway-basic-auth
+        key: password
+
+resources:
+  limits:
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# 如需在带污点的节点(如 master/控制面)也采集日志,放开下面:
+# tolerations:
+#   - operator: Exists
+
+config:
+  service: |
+    [SERVICE]
+        Daemon          Off
+        Flush           1
+        Log_Level       info
+        Parsers_File    /fluent-bit/etc/parsers.conf
+        Parsers_File    /fluent-bit/etc/conf/custom_parsers.conf
+        HTTP_Server     On
+        HTTP_Listen     0.0.0.0
+        HTTP_Port       2020
+        Health_Check    On
+
+  # 应用层多行解析器:把 Lua table dump / 栈回溯 拼成一条
+  customParsers: |
+    [MULTILINE_PARSER]
+        name          skynet_multiline
+        type          regex
+        flush_timeout 1000
+        # 起始行:以 [级别][日期] 开头,或以 ../ 开头(栈回溯首行)
+        rule          "start_state"  "/^(\[(?:DEBUG|INFO|WARN|WARNING|ERROR|FATAL|TRACE)\]\[\d{4}-\d{2}-\d{2}|\.\.\/).*$/"  "cont"
+        # 续行:不符合起始模式的所有行(table 续行、缩进栈帧、} 等)并入上一条
+        rule          "cont"         "/^(?!(\[(?:DEBUG|INFO|WARN|WARNING|ERROR|FATAL|TRACE)\]\[\d{4}-\d{2}-\d{2}|\.\.\/)).*$/"  "cont"
+
+  inputs: |
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        multiline.parser  cri
+        Mem_Buf_Limit     10MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+
+  filters: |
+    [FILTER]
+        Name                  multiline
+        Match                 kube.*
+        multiline.key_content log
+        multiline.parser      skynet_multiline
+        buffer                on
+
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Merge_Log           Off
+        Labels              On
+        Annotations         Off
+
+  outputs: |
+    [OUTPUT]
+        Name                loki
+        Match               kube.*
+        Host                loki-gateway.monitoring.svc.cluster.local
+        Port                80
+        http_user           ${LOKI_USER}
+        http_passwd         ${LOKI_PASSWORD}
+        auto_kubernetes_labels off
+        # stream 标签(低基数):cluster / namespace / app(服务类型)/ instance(区服)
+        Labels              cluster=prod, namespace=$kubernetes['namespace_name'], app=$kubernetes['labels']['app.kubernetes.io/name'], instance=$kubernetes['labels']['app.kubernetes.io/instance']
+        # 结构化元数据(高基数,Loki 3.x 支持):pod 名、容器名
+        structured_metadata pod=$kubernetes['pod_name'], container=$kubernetes['container_name']
+        # 把元数据键剔出正文,只留 message,再以纯文本原样写入 Loki
+        remove_keys         _p, kubernetes, stream, time, logtag
+        drop_single_key     raw
+        line_format         json

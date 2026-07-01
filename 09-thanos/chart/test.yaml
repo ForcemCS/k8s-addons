@@ -1341,8 +1341,8 @@ volumePermissions:
   enabled: false
   image:
     registry: docker.io
-    repository: bitnami/os-shell
-    tag: 12-debian-12-r24
+    repository: soldevelo/os-shell
+    tag: 12-debian-12-r3
     digest: ""
     pullPolicy: IfNotPresent
     pullSecrets: []

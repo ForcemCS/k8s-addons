@@ -6,7 +6,7 @@ metadata:
 spec:  
   steps:  
     - name: run-k8s-job  
-      image: bitnami/kubectl:latest  # Använd en lämplig bild  
+      image: soldevelo/kubectl:latest  # Använd en lämplig bild  
       script: |  
         #!/bin/sh  
         set -e  

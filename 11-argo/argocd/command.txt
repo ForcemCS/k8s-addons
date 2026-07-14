@@ -32,6 +32,27 @@ argocd app create demo2 \
 argocd app sync demo2
 
 ## SSH 认证
+
+ssh-keygen -t ed25519 \
+  -f ~/.ssh/argocd_gitlab \
+  -C "argocd-gitlab-prod"
+  
+  
+ssh-keyscan gitlab.local.com > /tmp/gitlab_known_hosts
+
+
+argocd cert add-ssh --batch --from /tmp/gitlab_known_hosts
+
+
+argocd repo add \
+  git@gitlab.local.com:你的组名/你的仓库.git \
+  --ssh-private-key-path ~/.ssh/argocd_gitlab
+
+
+
+
+
+
 authorized_keys 如果某一个人手里有一枚私钥，他的对等公钥在则个authorized_keys，那么他就可以免密认证到这台服务器
 
 known_hosts: 这个文件存储了你之前连接过的 SSH 服务器的主机密钥（也称为服务器公钥）。当你再次连接到同一服务器时，

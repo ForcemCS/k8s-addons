@@ -29,7 +29,7 @@ ingress:
   annotations: {}
 
   hosts:
-    - host: kauth.xjcsrowxxyx.soletower.com
+    - host: kauth.example.com
       paths:
         - path: /
           pathType: Prefix
@@ -37,7 +37,7 @@ ingress:
   tls:
     - secretName: keycloak-ingress-secret
       hosts:
-        - kauth.xjcsrowxxyx.soletower.com
+        - kauth.example.com
 
 
 # 不使用 Gateway API

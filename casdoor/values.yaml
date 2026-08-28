@@ -1,0 +1,73 @@
+replicaCount: 1
+
+
+image:
+  repository: casbin
+  name: casdoor
+  pullPolicy: IfNotPresent
+  tag: "3.159.0"
+
+
+# 不让 Helm ConfigMap 保存 app.conf
+config: ""
+
+# 使用我们自己创建的 Secret
+configFromSecret: casdoor-config
+
+
+service:
+  type: ClusterIP
+  port: 8000
+
+
+# 使用老平台已有的 ingress-nginx
+ingress:
+  enabled: true
+
+  className: auth
+
+  annotations: {}
+
+  hosts:
+    - host: kauth.xjcsrowxxyx.soletower.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+  tls:
+    - secretName: keycloak-ingress-secret
+      hosts:
+        - kauth.xjcsrowxxyx.soletower.com
+
+
+# 不使用 Gateway API
+gatewayApi:
+  enabled: false
+
+
+# 不开 HPA
+autoscaling:
+  enabled: false
+
+
+# 单副本阶段给一个基础资源配置
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+
+probe:
+  readiness:
+    enabled: true
+
+  liveness:
+    enabled: true
+
+
+ldap:
+  enabled: false
